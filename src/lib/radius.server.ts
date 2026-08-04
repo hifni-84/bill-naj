@@ -538,6 +538,51 @@ export async function expiredOnline(): Promise<string[]> {
   return rows.map((r) => r.username);
 }
 
+/**
+ * MODE HYBRID: voucher yang login lewat user lokal MikroTik tidak pernah
+ * tercatat di radacct, sehingga billing tidak tahu voucher sudah dipakai.
+ * Fungsi ini mencatat login pertama (dari uptime di router) + menghitung
+ * masa aktif & menandai voucher sebagai terjual.
+ */
+export async function stampRouterLogins(
+  items: Array<{ username: string; uptimeSeconds?: number }>,
+) {
+  if (!items.length) return { stamped: 0 };
+  await ensurePaidColumn();
+  let stamped = 0;
+  for (const it of items) {
+    const rows = await query<{ username: string; validity: number }>(
+      `SELECT v.username, COALESCE(p.validity_seconds, 0) AS validity
+         FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan
+        WHERE v.username = ? AND v.first_login IS NULL LIMIT 1`,
+      [it.username],
+    );
+    const row = rows[0];
+    if (!row) continue;
+    const lalu = Math.max(0, Math.floor(Number(it.uptimeSeconds ?? 0)));
+    const validity = Number(row.validity ?? 0);
+    if (validity > 0) {
+      await query(
+        `UPDATE billing_voucher
+            SET first_login = DATE_SUB(NOW(), INTERVAL ? SECOND),
+                expires_at = DATE_ADD(DATE_SUB(NOW(), INTERVAL ? SECOND), INTERVAL ? SECOND),
+                paid = 1
+          WHERE username = ?`,
+        [lalu, lalu, validity, it.username],
+      );
+    } else {
+      await query(
+        `UPDATE billing_voucher
+            SET first_login = DATE_SUB(NOW(), INTERVAL ? SECOND), paid = 1
+          WHERE username = ?`,
+        [lalu, it.username],
+      );
+    }
+    stamped += 1;
+  }
+  return { stamped };
+}
+
 /* --------------------------------- NAS ---------------------------------- */
 
 let nasTzReady = false;
