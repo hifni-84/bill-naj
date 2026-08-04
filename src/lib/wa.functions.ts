@@ -81,3 +81,39 @@ export const waPhoneSave = createServerFn({ method: "POST" })
       return { ok: false as const, error: (e as Error).message };
     }
   });
+
+/* ----- Provider self-hosted (QR scan) ----- */
+
+/** Status koneksi gateway self-hosted. */
+export const waSelfStatus = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const { selfWaStatus } = await import("./wa.server");
+    return { ok: true as const, status: await selfWaStatus() };
+  } catch (e) {
+    return {
+      ok: false as const,
+      status: { state: "offline" as const, user: "", hasQr: false },
+    };
+  }
+});
+
+/** Ambil QR code (data URL PNG) untuk dipindai. */
+export const waSelfQr = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const { selfWaQr } = await import("./wa.server");
+    return { ok: true as const, qr: await selfWaQr(), error: null as string | null };
+  } catch (e) {
+    return { ok: false as const, qr: "", error: (e as Error).message };
+  }
+});
+
+/** Logout / pindai ulang. */
+export const waSelfLogout = createServerFn({ method: "POST" }).handler(async () => {
+  try {
+    const { selfWaLogout } = await import("./wa.server");
+    await selfWaLogout();
+    return { ok: true as const, error: null as string | null };
+  } catch (e) {
+    return { ok: false as const, error: (e as Error).message };
+  }
+});
