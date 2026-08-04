@@ -105,12 +105,15 @@ export const radiusReport = createServerFn({ method: "GET" }).handler(async () =
 export const radiusMaintenance = createServerFn({ method: "POST" })
   .inputValidator((d: { hapusExpired: boolean }) => d)
   .handler(async ({ data }) => {
-    const { maintenance, expiredOnline, startAutoMaintenance } = await import("./radius.server");
+    const { maintenance, expiredOnline, expiredUsernames, startAutoMaintenance } = await import(
+      "./radius.server"
+    );
     try {
       startAutoMaintenance(data.hapusExpired);
       const online = await expiredOnline();
       const res = await maintenance(data.hapusExpired);
-      return { ...res, expiredOnline: online, error: null as string | null };
+      const expiredNames = await expiredUsernames();
+      return { ...res, expiredOnline: online, expiredNames, error: null as string | null };
     } catch (e) {
       // Database RADIUS belum tersambung: jangan bikin halaman blank.
       return {
@@ -118,6 +121,7 @@ export const radiusMaintenance = createServerFn({ method: "POST" })
         expired: 0,
         purged: 0,
         expiredOnline: [] as string[],
+        expiredNames: [] as string[],
         error: e instanceof Error ? e.message : "Database RADIUS tidak tersambung",
       };
     }
