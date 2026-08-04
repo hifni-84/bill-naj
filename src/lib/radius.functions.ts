@@ -87,9 +87,18 @@ export const radiusReport = createServerFn({ method: "GET" }).handler(async () =
   try {
     return await report();
   } catch {
-    return { daily: [], monthly: [], total: 0, totalVoucher: 0, byPlan: [] } as Awaited<
-      ReturnType<typeof report>
-    >;
+    return {
+      daily: [],
+      monthly: [],
+      todayRevenue: 0,
+      todayCount: 0,
+      monthRevenue: 0,
+      monthCount: 0,
+      totalRevenue: 0,
+      totalUsers: 0,
+      used: 0,
+      online: 0,
+    };
   }
 });
 
