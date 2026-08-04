@@ -745,15 +745,31 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
 
           {/* ---------------- PARAMETER ---------------- */}
           <TabsContent value="param" className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Cari parameter, mis. SSID, VLAN, PPP, Hosts…"
-                value={cariParam}
-                onChange={(e) => setCariParam(e.target.value)}
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Cari parameter, mis. SSID, VLAN, PPP, Hosts…"
+                  value={cariParam}
+                  onChange={(e) => setCariParam(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="outline"
+                disabled={tarikSemua.isPending}
+                onClick={() => tarikSemua.mutate(undefined as never)}
+              >
+                <Download className="size-4" />
+                {tarikSemua.isPending ? "Menarik…" : "Tarik semua parameter"}
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Terbaca {params.data?.params?.length ?? 0} parameter.{" "}
+              {device && !device.online
+                ? "ONU sedang offline — tugas akan dijalankan saat ONU inform berikutnya."
+                : "Klik “Tarik semua parameter” lalu tunggu beberapa detik dan muat ulang."}
+            </p>
             <div className="max-h-72 overflow-auto rounded-lg border border-border">
               <table className="w-full text-[11px]">
                 <tbody>
