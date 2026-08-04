@@ -98,11 +98,7 @@ export function BackupRestore() {
         <Button onClick={() => void doExport()} disabled={busy !== null}>
           <Download className="size-4" /> {busy === "export" ? "Menyiapkan..." : "Backup Sekarang"}
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => fileRef.current?.click()}
-          disabled={busy !== null}
-        >
+        <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy !== null}>
           <Upload className="size-4" /> {busy === "import" ? "Memulihkan..." : "Restore dari File"}
         </Button>
         <input
