@@ -728,6 +728,159 @@ function PengaturanPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <MessageCircle className="size-4 text-primary" /> WhatsApp Gateway (Penagihan
+                Otomatis)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Setiap tagihan yang dibuat otomatis dikirim ke nomor WhatsApp pelanggan, berisi
+                nominal, jatuh tempo, dan link ke portal pembayaran (
+                <span className="mono-num text-foreground">/portal?u=username</span>). Nomor
+                pelanggan diisi di menu Tagihan.
+              </p>
+            </div>
+            <Switch
+              checked={wa.enabled}
+              onCheckedChange={(v) =>
+                void saveWa(
+                  { ...wa, enabled: v },
+                  v ? "Penagihan WhatsApp aktif" : "Penagihan WhatsApp nonaktif",
+                )
+              }
+              aria-label="Aktifkan WhatsApp gateway"
+            />
+          </div>
+
+          {wa.enabled && (
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="wa-prov">Provider Gateway</Label>
+                <select
+                  id="wa-prov"
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={wa.provider}
+                  onChange={(e) => setWa({ ...wa, provider: e.target.value as WaProvider })}
+                >
+                  <option value="fonnte">Fonnte</option>
+                  <option value="wablas">Wablas</option>
+                  <option value="custom">Custom / WhatsApp API sendiri</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wa-token">
+                  {wa.provider === "custom" ? "Token / Authorization (opsional)" : "Token API"}
+                </Label>
+                <Input
+                  id="wa-token"
+                  value={wa.token}
+                  onChange={(e) => setWa({ ...wa, token: e.target.value })}
+                  placeholder="Token dari dashboard gateway"
+                />
+              </div>
+              {wa.provider === "wablas" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="wa-secret">Secret Key (Wablas)</Label>
+                  <Input
+                    id="wa-secret"
+                    value={wa.secret}
+                    onChange={(e) => setWa({ ...wa, secret: e.target.value })}
+                  />
+                </div>
+              )}
+              {wa.provider !== "fonnte" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="wa-url">
+                    {wa.provider === "wablas"
+                      ? "Domain Wablas (mis. https://sg.wablas.com)"
+                      : "URL API (POST JSON)"}
+                  </Label>
+                  <Input
+                    id="wa-url"
+                    value={wa.apiUrl}
+                    onChange={(e) => setWa({ ...wa, apiUrl: e.target.value })}
+                    placeholder="https://domain-gateway/send-message"
+                  />
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Label htmlFor="wa-sender">Nomor Pengirim / Device (opsional)</Label>
+                <Input
+                  id="wa-sender"
+                  value={wa.sender}
+                  onChange={(e) => setWa({ ...wa, sender: e.target.value })}
+                  placeholder="6281234567890"
+                />
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="wa-tpl">Isi Pesan Tagihan</Label>
+                <Textarea
+                  id="wa-tpl"
+                  rows={7}
+                  value={wa.template}
+                  onChange={(e) => setWa({ ...wa, template: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Kode yang bisa dipakai: <span className="mono-num">{"{nama}"}</span>,{" "}
+                  <span className="mono-num">{"{paket}"}</span>,{" "}
+                  <span className="mono-num">{"{nominal}"}</span>,{" "}
+                  <span className="mono-num">{"{jatuh_tempo}"}</span>,{" "}
+                  <span className="mono-num">{"{merchant}"}</span>, dan{" "}
+                  <span className="mono-num">{"{link}"}</span> (link portal pembayaran).
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-self-start"
+                  onClick={() => setWa({ ...wa, template: defaultWaTemplate })}
+                >
+                  Pakai pesan bawaan
+                </Button>
+              </div>
+              <div className="flex items-start justify-between gap-4 sm:col-span-2">
+                <div>
+                  <p className="text-sm font-medium">Kirim otomatis saat tagihan dibuat</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pesan penagihan langsung dikirim ke semua pelanggan yang tagihannya baru dibuat
+                    (H-{inv.leadDays} sebelum expired).
+                  </p>
+                </div>
+                <Switch
+                  checked={wa.autoSend}
+                  onCheckedChange={(v) => setWa({ ...wa, autoSend: v })}
+                  aria-label="Kirim otomatis saat tagihan dibuat"
+                />
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="wa-test">Uji Kirim ke Nomor</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    id="wa-test"
+                    className="w-full sm:w-56"
+                    placeholder="6281234567890"
+                    value={waNomor}
+                    onChange={(e) => setWaNomor(e.target.value)}
+                  />
+                  <Button variant="outline" disabled={waBusy} onClick={() => void testWa()}>
+                    <Send className="size-4" /> {waBusy ? "Mengirim…" : "Uji Kirim"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Simpan pengaturan dulu sebelum uji kirim.
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <Button onClick={() => void saveWa(wa, "Pengaturan WhatsApp disimpan")}>
+                  <Save className="size-4" /> Simpan Pengaturan WhatsApp
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <CreditCard className="size-4 text-primary" /> Payment Gateway (Midtrans / Tripay)
               </h2>
               <p className="mt-1 max-w-xl text-xs text-muted-foreground">
