@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { CreditCard, QrCode, Search, Wifi } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CreditCard, Gauge, QrCode, Search, Wifi } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { rupiah, statusLabel } from "@/lib/invoice-types";
 import { invoiceLookup } from "@/lib/invoice.functions";
+import { formatBytes } from "@/lib/mikrotik-types";
 import { gatewayPublicGet, paymentCreate } from "@/lib/payment.functions";
 
 export const Route = createFileRoute("/portal")({
@@ -31,6 +32,12 @@ export const Route = createFileRoute("/portal")({
 
 const tanggal = (v: string | null) =>
   v ? new Date(v).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-";
+
+const durasi = (detik: number) => {
+  const j = Math.floor(detik / 3600);
+  const m = Math.floor((detik % 3600) / 60);
+  return j > 0 ? `${j} jam ${m} menit` : `${m} menit`;
+};
 
 function PortalPage() {
   const [username, setUsername] = useState("");
@@ -100,6 +107,39 @@ function PortalPage() {
             <p className="mt-1 text-lg font-semibold">{hasil.plan || "-"}</p>
             <p className="mono-num mt-2 text-sm text-muted-foreground">
               Masa aktif sampai: {tanggal(hasil.expires_at)}
+            </p>
+          </div>
+
+          <div className="panel p-5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <Gauge className="size-4 text-primary" /> Total Pemakaian Kuota
+            </h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ArrowDownToLine className="size-3.5" /> Download
+                </p>
+                <p className="mono-num mt-1 text-base font-semibold">
+                  {formatBytes(hasil.usage?.download ?? 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ArrowUpFromLine className="size-3.5" /> Upload
+                </p>
+                <p className="mono-num mt-1 text-base font-semibold">
+                  {formatBytes(hasil.usage?.upload ?? 0)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-secondary/60 p-3">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="mono-num mt-1 text-base font-semibold text-primary">
+                  {formatBytes(hasil.usage?.total ?? 0)}
+                </p>
+              </div>
+            </div>
+            <p className="mono-num mt-3 text-xs text-muted-foreground">
+              Total durasi pemakaian: {durasi(hasil.usage?.sessionTime ?? 0)}
             </p>
           </div>
 
