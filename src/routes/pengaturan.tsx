@@ -138,6 +138,13 @@ function PengaturanPage() {
       .catch(() => undefined);
   }, []);
 
+  const publicBase = (() => {
+    const host = pub.host.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const scheme = pub.https ? "https" : "http";
+    const port = pub.port.trim();
+    return `${scheme}://${host}${port ? `:${port}` : ""}`;
+  })();
+
   const savePublic = async () => {
     const host = pub.host.trim();
     if (!host) {
