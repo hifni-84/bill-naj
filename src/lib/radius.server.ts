@@ -203,6 +203,8 @@ export type NewUser = {
   paid?: boolean;
   /** IP NAS (router) pembatas login. Kosong = boleh dari semua NAS. */
   nas?: string;
+  /** Nomor WhatsApp pelanggan (untuk kirim tagihan paket bulanan). */
+  phone?: string;
 };
 
 export async function createUsers(users: NewUser[]) {
