@@ -149,6 +149,9 @@ function PengaturanPage() {
     void gatewayOptionsGet()
       .then((r) => setGw(r.options))
       .catch(() => undefined);
+    void waOptionsGet()
+      .then((r) => setWa(r.options))
+      .catch(() => undefined);
     void settingsGet()
       .then((r) => {
         if (!r.ok) return;
