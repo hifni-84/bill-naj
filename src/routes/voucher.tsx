@@ -270,10 +270,11 @@ function VoucherPage() {
               </Select>
             </div>
             <div className="flex min-w-0 flex-col gap-2">
-              <Label htmlFor="v-jml">Jumlah</Label>
+              <Label htmlFor="v-jml">Jumlah (maks 1000)</Label>
               <Input
                 id="v-jml"
                 inputMode="numeric"
+                max={1000}
                 value={vJumlah}
                 onChange={(e) => setVJumlah(e.target.value)}
               />
