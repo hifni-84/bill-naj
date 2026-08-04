@@ -155,6 +155,21 @@ export const radiusDeleteNas = createServerFn({ method: "POST" })
     return deleteNas(data.id);
   });
 
+export const radiusNasStatus = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      creds?: { username?: string; password?: string; port?: number; useHttps?: boolean };
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { nasStatuses } = await import("./nas-status.server");
+      return await nasStatuses(data.creds);
+    } catch {
+      return [];
+    }
+  });
+
 export const radiusDeleteExpired = createServerFn({ method: "POST" }).handler(async () => {
   const { deleteExpiredUsers } = await import("./radius.server");
   return deleteExpiredUsers();
