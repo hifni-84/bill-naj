@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, CreditCard, Globe, Save, Wifi, Layers, Receipt } from "lucide-react";
+import {
+  CheckCircle2,
+  CreditCard,
+  Globe,
+  Save,
+  Wifi,
+  Layers,
+  Receipt,
+  Upload,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -31,6 +41,7 @@ import {
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
+import { qrisRemove, qrisUpload } from "@/lib/qris.functions";
 import {
   defaultGatewayOptions,
   type GatewayOptions,
