@@ -59,13 +59,26 @@ function detectVendor(text: string): AcsDevice["vendor"] {
 
 function collectWlans(flat: Flat): AcsWlan[] {
   const wlans: AcsWlan[] = [];
-  for (const path of Object.keys(flat)) {
-    const igd = path.match(/^(.*WLANConfiguration\.(\d+))\.SSID$/);
-    const tr181 = path.match(/^(Device\.WiFi\.SSID\.(\d+))\.SSID$/);
+  // Kumpulkan root WLAN dari parameter apa pun (SSID mungkin belum ter-fetch)
+  const roots = new Map<string, { index: string; igd: boolean }>();
+  for (const key of Object.keys(flat)) {
+    const igd = key.match(/^(.*WLANConfiguration\.(\d+))(\.|$)/);
+    const tr181 = key.match(/^(Device\.WiFi\.SSID\.(\d+))(\.|$)/);
     const m = igd ?? tr181;
     if (!m) continue;
-    const root = m[1]!;
-    const index = m[2]!;
+    if (!roots.has(m[1]!)) roots.set(m[1]!, { index: m[2]!, igd: Boolean(igd) });
+  }
+  for (const [root, meta] of roots) {
+    const { index, igd } = meta;
+    const ssidPath = `${root}.SSID`;
+    const ssid = pick(
+      flat,
+      ssidPath,
+      `${root}.X_ZTE-COM_SSID`,
+      `${root}.X_HW_SSID`,
+      `Device.WiFi.SSID.${index}.SSID`,
+      `Device.WiFi.SSID.${index}.Alias`,
+    );
     const pwdCandidates = igd
       ? [
           `${root}.KeyPassphrase`,
@@ -97,8 +110,8 @@ function collectWlans(flat: Flat): AcsWlan[] {
     wlans.push({
       index,
       root,
-      ssidPath: path,
-      ssid: String(flat[path] ?? ""),
+      ssidPath,
+      ssid,
       passwordPath,
       password: String(flat[passwordPath] ?? ""),
       enabled: String(pick(flat, `${root}.Enable`, `Device.WiFi.SSID.${index}.Enable`)) === "true",
@@ -141,9 +154,14 @@ function collectHosts(flat: Flat): AcsHost[] {
 function collectVlans(flat: Flat): AcsVlan[] {
   const out: AcsVlan[] = [];
   for (const path of Object.keys(flat)) {
-    if (!/(^|\.)(X_[^.]*_)?VLAN(ID|IDMark)?$/i.test(path) && !/VLANID$/i.test(path)) continue;
+    // cocokkan berbagai nama vendor: VLANID, VLANIDMark, X_..._VLANID, VID, TagValue, VLANIDMark
+    if (
+      !/(^|\.)(X_[^.]*_)?(VLAN(ID)?(Mark)?|VID|TagValue|VLANIDMark)$/i.test(path) &&
+      !/VLAN/i.test(path.split(".").pop() ?? "")
+    )
+      continue;
     const value = String(flat[path] ?? "");
-    if (!value.length) continue;
+    if (!value.length || value === "0" || value === "-1") continue;
     const scope = /WANPPPConnection/.test(path)
       ? "WAN PPPoE"
       : /WANIPConnection/.test(path)
@@ -166,9 +184,14 @@ function collectWans(flat: Flat): AcsWan[] {
     if (seen.has(root)) continue;
     seen.add(root);
     const kind = m[2] === "WANPPPConnection" ? "PPPoE" : "IP";
-    const vlanKey = Object.keys(flat).find(
-      (k) => k.startsWith(`${root}.`) && /VLANID|VLANIDMark|X_.*_VLANID/i.test(k),
-    );
+    // VLAN bisa berada di dalam koneksi, atau di level WANConnectionDevice induknya
+    const connDevice = root.replace(/\.(WANPPPConnection|WANIPConnection)\.\d+$/, "");
+    const vlanRe = /(VLANID|VLANIDMark|VLAN$|_VLAN|VID$|TagValue$)/i;
+    const vlanKey =
+      Object.keys(flat).find((k) => k.startsWith(`${root}.`) && vlanRe.test(k)) ??
+      Object.keys(flat).find(
+        (k) => k.startsWith(`${connDevice}.`) && vlanRe.test(k) && String(flat[k] ?? "").length,
+      );
     wans.push({
       path: root,
       parentPath: `${root.replace(/\.\d+$/, "")}.`,
@@ -331,7 +354,23 @@ export async function setAcsWifi(
 }
 
 export async function refreshAcsDevice(creds: AcsCreds, deviceId: string) {
-  await postTask(creds, deviceId, { name: "refreshObject", objectName: "" });
+  // Refresh seluruh pohon + subtree penting (SSID/VLAN sering belum ter-fetch
+  // kalau hanya mengandalkan refresh root pada beberapa ONU)
+  const subtrees = [
+    "",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice",
+    "InternetGatewayDevice.LANDevice.1.Hosts",
+    "Device.WiFi",
+    "Device.IP.Interface",
+  ];
+  for (const objectName of subtrees) {
+    try {
+      await postTask(creds, deviceId, { name: "refreshObject", objectName });
+    } catch {
+      // objek tidak ada pada model perangkat ini — lanjutkan
+    }
+  }
   return { ok: true as const };
 }
 
