@@ -372,6 +372,70 @@ function PengaturanPage() {
         </div>
 
         <div className="panel p-6 lg:col-span-2">
+          <div className="mb-1 flex items-center gap-2">
+            <Globe className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold">Akses Publik (IP Publik / DDNS)</h2>
+          </div>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Isi IP publik atau domain DDNS server billing agar panel, portal pelanggan, dan callback
+            payment gateway bisa diakses dari jaringan luar.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="pub-host">IP Publik / DDNS</Label>
+              <Input
+                id="pub-host"
+                placeholder="najwa.ddns.net atau 103.10.20.30"
+                value={pub.host}
+                onChange={(e) => setPub({ ...pub, host: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pub-port">Port</Label>
+              <Input
+                id="pub-port"
+                placeholder="3000 / kosongkan bila 80-443"
+                value={pub.port}
+                onChange={(e) => setPub({ ...pub, port: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4">
+            <div>
+              <p className="text-sm font-medium">Gunakan HTTPS</p>
+              <p className="text-xs text-muted-foreground">
+                Aktifkan bila domain sudah memakai SSL (Let&apos;s Encrypt / Nginx).
+              </p>
+            </div>
+            <Switch
+              checked={pub.https}
+              onCheckedChange={(v) => setPub({ ...pub, https: v })}
+              aria-label="Gunakan HTTPS"
+            />
+          </div>
+          {pub.host.trim() && (
+            <div className="mono-num mt-4 grid gap-1 rounded-md bg-secondary/60 p-3 text-xs">
+              <p>
+                Panel billing: <span className="text-primary">{publicBase}</span>
+              </p>
+              <p>
+                Portal pelanggan: <span className="text-primary">{publicBase}/portal</span>
+              </p>
+              <p>
+                Callback pembayaran:{" "}
+                <span className="text-primary">{publicBase}/api/public/pay-callback/midtrans</span>
+              </p>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Pastikan port di atas sudah diforward di router/firewall ke server billing.
+          </p>
+          <Button className="mt-4" onClick={() => void savePublic()}>
+            <Save className="size-4" /> Simpan Alamat Publik
+          </Button>
+        </div>
+
+        <div className="panel p-6 lg:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-sm font-semibold">
