@@ -25,6 +25,15 @@ const legacy = {
   salt: "billing.auth.passwordSalt",
 };
 
+/** Settings memakai MySQL RADIUS; jika DB belum siap, pakai nilai default. */
+async function safeSettings(): Promise<Record<string, string>> {
+  try {
+    return await getSettings();
+  } catch {
+    return {};
+  }
+}
+
 function passwordHash(password: string, salt: string) {
   return createHash("sha256").update(`${salt}:${password}`).digest("hex");
 }
@@ -41,7 +50,7 @@ function readRole(settings: Record<string, string>, role: BillingRole) {
 }
 
 export async function getBillingAccounts() {
-  const settings = await getSettings();
+  const settings = await safeSettings();
   return billingRoles.map((role) => {
     const entry = readRole(settings, role);
     return {
@@ -53,7 +62,7 @@ export async function getBillingAccounts() {
 }
 
 export async function verifyBillingAccount(username: string, password: string) {
-  const settings = await getSettings();
+  const settings = await safeSettings();
   const supplied = username.trim();
 
   for (const role of billingRoles) {
