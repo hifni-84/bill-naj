@@ -123,6 +123,10 @@ function PengaturanPage() {
   const [wa, setWa] = useState<WaOptions>(defaultWaOptions);
   const [waNomor, setWaNomor] = useState("");
   const [waBusy, setWaBusy] = useState(false);
+  const [waQr, setWaQr] = useState("");
+  const [waSelfState, setWaSelfState] = useState<string>("offline");
+  const [waSelfUser, setWaSelfUser] = useState("");
+  const [waQrBusy, setWaQrBusy] = useState(false);
 
   useEffect(() => {
     setForm(readCreds());
