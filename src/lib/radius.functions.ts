@@ -174,6 +174,18 @@ export const radiusDeleteExpired = createServerFn({ method: "POST" }).handler(as
   return deleteExpiredUsers();
 });
 
+/** Mode hybrid: catat voucher yang sudah login di user lokal MikroTik. */
+export const radiusStampRouterLogins = createServerFn({ method: "POST" })
+  .inputValidator((d: { items: Array<{ username: string; uptimeSeconds?: number }> }) => d)
+  .handler(async ({ data }) => {
+    try {
+      const { stampRouterLogins } = await import("./radius.server");
+      return await stampRouterLogins(data.items);
+    } catch {
+      return { stamped: 0 };
+    }
+  });
+
 export const radiusReactivateUsers = createServerFn({ method: "POST" })
   .inputValidator((d: { usernames: string[] }) => d)
   .handler(async ({ data }) => {

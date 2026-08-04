@@ -35,7 +35,6 @@ function utc(col: string) {
   return `DATE_FORMAT(${col}, '%Y-%m-%dT%H:%i:%sZ')`;
 }
 
-
 type Row = Record<string, unknown>;
 
 let paidReady = false;
@@ -74,11 +73,23 @@ export async function query<T = Row>(sql: string, params: unknown[] = []): Promi
  */
 function radiusDate(iso: string) {
   const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
-  const bulan = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const bulan = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(d.getUTCDate())} ${bulan[d.getUTCMonth()]} ${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
-
 
 export async function pingDb() {
   const rows = await query<{ v: string }>("SELECT VERSION() AS v");
@@ -114,7 +125,15 @@ export async function savePlan(p: RadiusPlan) {
      VALUES (?,?,?,?,?,?,?)
      ON DUPLICATE KEY UPDATE price=VALUES(price), cost_price=VALUES(cost_price), rate_limit=VALUES(rate_limit),
        validity_seconds=VALUES(validity_seconds), shared_users=VALUES(shared_users), service=VALUES(service)`,
-    [p.name, p.price, p.cost_price ?? 0, p.rate_limit, p.validity_seconds, p.shared_users, p.service],
+    [
+      p.name,
+      p.price,
+      p.cost_price ?? 0,
+      p.rate_limit,
+      p.validity_seconds,
+      p.shared_users,
+      p.service,
+    ],
   );
 
   // atribut grup dipakai FreeRADIUS untuk membalas ke MikroTik
@@ -172,7 +191,6 @@ export async function listUsers(): Promise<RadiusUser[]> {
       ORDER BY v.created_at DESC, v.username`,
   );
 }
-
 
 export type NewUser = {
   username: string;
@@ -323,7 +341,9 @@ export async function report(): Promise<RadiusReport> {
        AND COALESCE(acctupdatetime, acctstarttime) > NOW() - INTERVAL 10 MINUTE`,
   );
   return {
-    daily: daily.map((d) => ({ date: d.date, total: Number(d.total), count: Number(d.count) })).reverse(),
+    daily: daily
+      .map((d) => ({ date: d.date, total: Number(d.total), count: Number(d.count) }))
+      .reverse(),
     monthly: monthly
       .map((m) => ({ month: m.month, total: Number(m.total), count: Number(m.count) }))
       .reverse(),
@@ -337,7 +357,6 @@ export async function report(): Promise<RadiusReport> {
     online: Number(on[0]?.n ?? 0),
   };
 }
-
 
 /* ---------------------------- PEMELIHARAAN ------------------------------ */
 
@@ -416,7 +435,6 @@ export async function maintenance(hapusExpired = true) {
         AND EXISTS (SELECT 1 FROM radacct a WHERE a.username = v.username)`,
   );
 
-
   // 1c) Voucher UNPAID yang sudah login -> otomatis jadi PAID (sudah terjual)
   await ensurePaidColumn();
   await query(
@@ -434,10 +452,9 @@ export async function maintenance(hapusExpired = true) {
       WHERE first_login IS NOT NULL AND expires_at IS NOT NULL AND expires_at > NOW()`,
   );
   for (const a of aktif) {
-    await query(
-      "DELETE FROM radreply WHERE username = ? AND attribute = 'Session-Timeout'",
-      [a.username],
-    );
+    await query("DELETE FROM radreply WHERE username = ? AND attribute = 'Session-Timeout'", [
+      a.username,
+    ]);
     await query(
       "INSERT INTO radreply (username, attribute, op, value) VALUES (?, 'Session-Timeout', ':=', ?)",
       [a.username, String(Math.max(60, Number(a.sisa)))],
@@ -506,10 +523,10 @@ export async function reactivateUsers(usernames: string[]) {
       r.username,
     ]);
     await query("DELETE FROM radusergroup WHERE username = ?", [r.username]);
-    await query(
-      "INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)",
-      [r.username, r.plan],
-    );
+    await query("INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)", [
+      r.username,
+      r.plan,
+    ]);
   }
   return { reactivated: rows.length };
 }
@@ -527,7 +544,6 @@ export function startAutoMaintenance(hapusExpired = true) {
   maintenance(hapusExpired).catch(() => {});
 }
 
-
 /** Daftar user yang sedang online + sudah expired (untuk diputus dari router). */
 export async function expiredOnline(): Promise<string[]> {
   const rows = await query<{ username: string }>(
@@ -536,6 +552,51 @@ export async function expiredOnline(): Promise<string[]> {
       WHERE v.expires_at IS NOT NULL AND v.expires_at <= NOW()`,
   );
   return rows.map((r) => r.username);
+}
+
+/**
+ * MODE HYBRID: voucher yang login lewat user lokal MikroTik tidak pernah
+ * tercatat di radacct, sehingga billing tidak tahu voucher sudah dipakai.
+ * Fungsi ini mencatat login pertama (dari uptime di router) + menghitung
+ * masa aktif & menandai voucher sebagai terjual.
+ */
+export async function stampRouterLogins(
+  items: Array<{ username: string; uptimeSeconds?: number }>,
+) {
+  if (!items.length) return { stamped: 0 };
+  await ensurePaidColumn();
+  let stamped = 0;
+  for (const it of items) {
+    const rows = await query<{ username: string; validity: number }>(
+      `SELECT v.username, COALESCE(p.validity_seconds, 0) AS validity
+         FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan
+        WHERE v.username = ? AND v.first_login IS NULL LIMIT 1`,
+      [it.username],
+    );
+    const row = rows[0];
+    if (!row) continue;
+    const lalu = Math.max(0, Math.floor(Number(it.uptimeSeconds ?? 0)));
+    const validity = Number(row.validity ?? 0);
+    if (validity > 0) {
+      await query(
+        `UPDATE billing_voucher
+            SET first_login = DATE_SUB(NOW(), INTERVAL ? SECOND),
+                expires_at = DATE_ADD(DATE_SUB(NOW(), INTERVAL ? SECOND), INTERVAL ? SECOND),
+                paid = 1
+          WHERE username = ?`,
+        [lalu, lalu, validity, it.username],
+      );
+    } else {
+      await query(
+        `UPDATE billing_voucher
+            SET first_login = DATE_SUB(NOW(), INTERVAL ? SECOND), paid = 1
+          WHERE username = ?`,
+        [lalu, it.username],
+      );
+    }
+    stamped += 1;
+  }
+  return { stamped };
 }
 
 /* --------------------------------- NAS ---------------------------------- */
