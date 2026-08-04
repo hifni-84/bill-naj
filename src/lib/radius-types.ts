@@ -12,6 +12,8 @@ export type RadiusPlan = {
   validity_seconds: number;
   shared_users: number;
   service: "hotspot" | "pppoe";
+  /** 1 = paket ditampilkan & bisa dibeli di portal pelanggan */
+  portal?: number;
 };
 
 export type RadiusUser = {

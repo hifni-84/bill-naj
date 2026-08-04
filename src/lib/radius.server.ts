@@ -113,18 +113,33 @@ async function ensureCostColumn() {
 
 export async function listPlans(): Promise<RadiusPlan[]> {
   await ensureCostColumn();
+  await ensurePortalColumn();
   return query<RadiusPlan>(
-    "SELECT name, price, cost_price, rate_limit, validity_seconds, shared_users, service FROM billing_plan ORDER BY service, name",
+    "SELECT name, price, cost_price, rate_limit, validity_seconds, shared_users, service, portal FROM billing_plan ORDER BY service, name",
   );
+}
+
+let portalColReady = false;
+/** Kolom penanda paket yang boleh dijual di portal pelanggan. */
+export async function ensurePortalColumn() {
+  if (portalColReady) return;
+  try {
+    await query("ALTER TABLE billing_plan ADD COLUMN portal TINYINT(1) NOT NULL DEFAULT 0");
+  } catch {
+    /* kolom sudah ada */
+  }
+  portalColReady = true;
 }
 
 export async function savePlan(p: RadiusPlan) {
   await ensureCostColumn();
+  await ensurePortalColumn();
   await query(
-    `INSERT INTO billing_plan (name, price, cost_price, rate_limit, validity_seconds, shared_users, service)
-     VALUES (?,?,?,?,?,?,?)
+    `INSERT INTO billing_plan (name, price, cost_price, rate_limit, validity_seconds, shared_users, service, portal)
+     VALUES (?,?,?,?,?,?,?,?)
      ON DUPLICATE KEY UPDATE price=VALUES(price), cost_price=VALUES(cost_price), rate_limit=VALUES(rate_limit),
-       validity_seconds=VALUES(validity_seconds), shared_users=VALUES(shared_users), service=VALUES(service)`,
+       validity_seconds=VALUES(validity_seconds), shared_users=VALUES(shared_users), service=VALUES(service),
+       portal=VALUES(portal)`,
     [
       p.name,
       p.price,
@@ -133,6 +148,7 @@ export async function savePlan(p: RadiusPlan) {
       p.validity_seconds,
       p.shared_users,
       p.service,
+      p.portal ? 1 : 0,
     ],
   );
 

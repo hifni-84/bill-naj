@@ -71,3 +71,25 @@ CREATE TABLE IF NOT EXISTS billing_invoice (
 ALTER TABLE billing_invoice ADD COLUMN pay_provider VARCHAR(16) NOT NULL DEFAULT '';
 ALTER TABLE billing_invoice ADD COLUMN pay_ref VARCHAR(64) NOT NULL DEFAULT '';
 ALTER TABLE billing_invoice ADD COLUMN pay_url VARCHAR(512) NOT NULL DEFAULT '';
+
+-- Paket yang boleh dibeli pelanggan di portal.
+ALTER TABLE billing_plan ADD COLUMN portal TINYINT(1) NOT NULL DEFAULT 0;
+
+-- Pesanan voucher dari portal pelanggan.
+CREATE TABLE IF NOT EXISTS billing_order (
+  id           INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  code         VARCHAR(24) NOT NULL,
+  plan         VARCHAR(64) NOT NULL,
+  phone        VARCHAR(24) NOT NULL DEFAULT '',
+  amount       INT NOT NULL DEFAULT 0,
+  username     VARCHAR(64) NOT NULL DEFAULT '',
+  password     VARCHAR(64) NOT NULL DEFAULT '',
+  status       ENUM('pending','paid','cancelled') NOT NULL DEFAULT 'pending',
+  pay_provider VARCHAR(16) NOT NULL DEFAULT '',
+  pay_ref      VARCHAR(64) NOT NULL DEFAULT '',
+  pay_url      VARCHAR(512) NOT NULL DEFAULT '',
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at      DATETIME NULL,
+  UNIQUE KEY uniq_code (code),
+  KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

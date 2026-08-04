@@ -71,7 +71,20 @@ export async function createPayment(invoiceId: number) {
   return { url, ref, provider: opt.provider, reused: false as const };
 }
 
-async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, inv: InvRow) {
+type Item = { plan: string; username: string };
+
+/** Buat link checkout gateway untuk referensi apa pun (tagihan atau pesanan voucher). */
+export async function checkoutUrl(ref: string, amount: number, item: Item) {
+  const opt = await gatewayOptions();
+  if (opt.provider === "none") throw new Error("Payment gateway belum diaktifkan");
+  const url =
+    opt.provider === "midtrans"
+      ? await midtransSnap(opt, ref, amount, item)
+      : await tripayTransaction(opt, ref, amount, item);
+  return { url, provider: opt.provider };
+}
+
+async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, inv: Item) {
   if (!opt.midtransServerKey) throw new Error("Server Key Midtrans belum diisi");
   const host = opt.sandbox ? "https://app.sandbox.midtrans.com" : "https://app.midtrans.com";
   const res = await fetch(`${host}/snap/v1/transactions`, {
@@ -98,7 +111,7 @@ async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, in
   return json.redirect_url;
 }
 
-async function tripayTransaction(opt: GatewayOptions, ref: string, amount: number, inv: InvRow) {
+async function tripayTransaction(opt: GatewayOptions, ref: string, amount: number, inv: Item) {
   if (!opt.tripayApiKey || !opt.tripayPrivateKey || !opt.tripayMerchantCode) {
     throw new Error("API Key / Private Key / Merchant Code Tripay belum lengkap");
   }
@@ -168,7 +181,7 @@ export async function handleMidtransCallback(raw: string) {
     body.transaction_status === "settlement" ||
     (body.transaction_status === "capture" && body.fraud_status !== "deny");
   if (!lunas) return { ok: true as const, paid: false };
-  return settle(invoiceIdOf(body.order_id ?? ""), "Midtrans");
+  return settleRef(body.order_id ?? "", "Midtrans");
 }
 
 /** Webhook Tripay: verifikasi X-Callback-Signature (HMAC raw body). */
@@ -179,7 +192,18 @@ export async function handleTripayCallback(raw: string, signature: string) {
   if (!sameHex(signature, expect)) return { ok: false as const, reason: "bad-signature" };
   const body = JSON.parse(raw) as { merchant_ref?: string; status?: string };
   if ((body.status ?? "").toUpperCase() !== "PAID") return { ok: true as const, paid: false };
-  return settle(invoiceIdOf(body.merchant_ref ?? ""), "Tripay");
+  return settleRef(body.merchant_ref ?? "", "Tripay");
+}
+
+/** Referensi bisa berupa tagihan (INV-) atau pesanan voucher portal (ORD-). */
+async function settleRef(ref: string, label: string) {
+  const orderId = Number(/^ORD-(\d+)/.exec(ref ?? "")?.[1] ?? 0);
+  if (orderId) {
+    const { settleOrder } = await import("./shop.server");
+    const res = await settleOrder(orderId, label);
+    return { ok: true as const, paid: res.ok, renewed: false };
+  }
+  return settle(invoiceIdOf(ref), label);
 }
 
 async function settle(id: number, label: string) {

@@ -8,6 +8,8 @@ import {
   Gauge,
   QrCode,
   Search,
+  ShoppingCart,
+  Ticket,
   Wifi,
 } from "lucide-react";
 
@@ -16,8 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { rupiah, statusLabel } from "@/lib/invoice-types";
 import { invoiceLookup } from "@/lib/invoice.functions";
-import { formatBytes } from "@/lib/mikrotik-types";
+import { formatBytes, formatDuration, formatIDR } from "@/lib/mikrotik-types";
 import { gatewayPublicGet, paymentCreate } from "@/lib/payment.functions";
+import { orderCreate, orderStatusGet, portalPlansGet } from "@/lib/shop.functions";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -50,6 +53,47 @@ const durasi = (detik: number) => {
 
 function PortalPage() {
   const [username, setUsername] = useState("");
+  const [beliPhone, setBeliPhone] = useState("");
+  const [kode, setKode] = useState("");
+
+  const paket = useQuery({ queryKey: ["portal-plans"], queryFn: () => portalPlansGet() });
+
+  const pesan = useMutation({
+    mutationFn: (plan: string) => orderCreate({ data: { plan, phone: beliPhone.trim() } }),
+    onSuccess: (res) => {
+      if (res.ok && res.url) {
+        try {
+          window.localStorage.setItem("najwa-order", res.code);
+        } catch {
+          /* storage diblokir */
+        }
+        window.location.href = res.url;
+      }
+    },
+  });
+
+  const cekOrder = useMutation({
+    mutationFn: (c: string) => orderStatusGet({ data: { code: c } }),
+  });
+
+  // Sepulang dari halaman pembayaran, tampilkan voucher yang sudah dibeli.
+  const autoOrder = useRef(false);
+  useEffect(() => {
+    if (autoOrder.current) return;
+    autoOrder.current = true;
+    let c = "";
+    try {
+      c = window.localStorage.getItem("najwa-order") ?? "";
+    } catch {
+      c = "";
+    }
+    if (c) {
+      setKode(c);
+      cekOrder.mutate(c);
+    }
+  }, [cekOrder]);
+
+  const order = cekOrder.data?.order ?? null;
 
   const cek = useMutation({
     mutationFn: (u: string) => invoiceLookup({ data: { username: u } }),
@@ -114,6 +158,109 @@ function PortalPage() {
           <Search className="size-4" /> {cek.isPending ? "Mencari..." : "Cek Tagihan"}
         </Button>
       </form>
+
+      {(paket.data?.plans.length ?? 0) > 0 && (
+        <div className="panel mt-5 p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingCart className="size-4 text-primary" /> Beli Voucher Baru
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pilih paket, bayar online, lalu username &amp; password voucher muncul otomatis di
+            halaman ini.
+          </p>
+          <div className="mt-4 grid gap-2">
+            <Label htmlFor="wa">No. WhatsApp (opsional — voucher dikirim ke WhatsApp)</Label>
+            <Input
+              id="wa"
+              inputMode="numeric"
+              placeholder="08xxxxxxxxxx"
+              value={beliPhone}
+              onChange={(e) => setBeliPhone(e.target.value)}
+            />
+          </div>
+          <ul className="mt-4 grid gap-3">
+            {paket.data?.plans.map((p) => (
+              <li
+                key={p.name}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{p.name}</p>
+                  <p className="mono-num text-xs text-muted-foreground">
+                    {p.rate_limit || "-"} · {formatDuration(p.validity_seconds)} ·{" "}
+                    {p.service.toUpperCase()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="mono-num text-sm font-semibold text-primary">
+                    {formatIDR(p.price)}
+                  </span>
+                  <Button size="sm" disabled={pesan.isPending} onClick={() => pesan.mutate(p.name)}>
+                    <CreditCard className="size-4" /> {pesan.isPending ? "Memproses..." : "Beli"}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {pesan.data && !pesan.data.ok && (
+            <p className="mt-3 text-sm text-destructive">{pesan.data.error}</p>
+          )}
+
+          <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end">
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="ord">Kode Pesanan</Label>
+              <Input
+                id="ord"
+                value={kode}
+                onChange={(e) => setKode(e.target.value.toUpperCase())}
+                placeholder="contoh: VABC12345"
+              />
+            </div>
+            <Button
+              variant="outline"
+              disabled={!kode.trim() || cekOrder.isPending}
+              onClick={() => cekOrder.mutate(kode.trim())}
+            >
+              <Ticket className="size-4" /> Cek Voucher
+            </Button>
+          </div>
+
+          {cekOrder.data && !order && (
+            <p className="mt-3 text-sm text-muted-foreground">Kode pesanan tidak ditemukan.</p>
+          )}
+          {order && (
+            <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-4">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                Pesanan {order.code} — {order.plan}
+              </p>
+              {order.status === "paid" ? (
+                <div className="mono-num mt-2 text-sm">
+                  <p>
+                    Username: <span className="font-semibold text-primary">{order.username}</span>
+                  </p>
+                  <p>
+                    Password: <span className="font-semibold text-primary">{order.password}</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Menunggu pembayaran {formatIDR(order.amount)}. Voucher muncul otomatis setelah
+                    pembayaran terverifikasi.
+                  </p>
+                  {order.pay_url && (
+                    <Button asChild size="sm" className="mt-3">
+                      <a href={order.pay_url}>
+                        <CreditCard className="size-4" /> Lanjutkan Pembayaran
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {hasil && !hasil.found && (
         <p className="panel mt-5 p-5 text-center text-sm text-muted-foreground">
