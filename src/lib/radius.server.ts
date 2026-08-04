@@ -62,7 +62,7 @@ async function ensureNasColumn() {
   nasColReady = true;
 }
 
-async function query<T = Row>(sql: string, params: unknown[] = []): Promise<T[]> {
+export async function query<T = Row>(sql: string, params: unknown[] = []): Promise<T[]> {
   const [rows] = await db().query(sql, params);
   return rows as T[];
 }
