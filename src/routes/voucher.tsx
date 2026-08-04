@@ -270,10 +270,11 @@ function VoucherPage() {
               </Select>
             </div>
             <div className="flex min-w-0 flex-col gap-2">
-              <Label htmlFor="v-jml">Jumlah</Label>
+              <Label htmlFor="v-jml">Jumlah (maks 1000)</Label>
               <Input
                 id="v-jml"
                 inputMode="numeric"
+                max={1000}
                 value={vJumlah}
                 onChange={(e) => setVJumlah(e.target.value)}
               />
@@ -367,7 +368,7 @@ function VoucherPage() {
                 onClick={() => {
                   const p = (plans.data ?? []).find((x) => x.name === vPlan);
                   if (!p) return;
-                  const n = Math.max(1, Math.min(500, Number(vJumlah) || 1));
+                  const n = Math.max(1, Math.min(1000, Number(vJumlah) || 1));
                   const len = Math.max(4, Math.min(12, Number(vPanjang) || 6));
                   const batch = vBatch.trim() || new Date().toISOString().slice(0, 10);
                   const chars = KARAKTER.find((k) => k.id === vChar)?.chars ?? KARAKTER[0]!.chars;
