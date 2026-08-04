@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { QrCode, Search, Wifi } from "lucide-react";
+import { CreditCard, QrCode, Search, Wifi } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { rupiah, statusLabel } from "@/lib/invoice-types";
 import { invoiceLookup } from "@/lib/invoice.functions";
+import { gatewayPublicGet, paymentCreate } from "@/lib/payment.functions";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -36,6 +37,17 @@ function PortalPage() {
 
   const cek = useMutation({
     mutationFn: (u: string) => invoiceLookup({ data: { username: u } }),
+  });
+
+  const gw = useQuery({ queryKey: ["gateway-public"], queryFn: () => gatewayPublicGet() });
+  const online = (gw.data?.provider ?? "none") !== "none";
+  const gwLabel = gw.data?.provider === "midtrans" ? "Midtrans" : "Tripay";
+
+  const bayar = useMutation({
+    mutationFn: (id: number) => paymentCreate({ data: { id, username: username.trim() } }),
+    onSuccess: (res) => {
+      if (res.ok && res.url) window.location.href = res.url;
+    },
   });
 
   const hasil = cek.data;
@@ -107,6 +119,17 @@ function PortalPage() {
                       {rupiah(i.amount)}
                     </p>
                     <p className="text-xs text-muted-foreground">{statusLabel[i.status]}</p>
+                    {online && i.status === "unpaid" && (
+                      <Button
+                        size="sm"
+                        className="mt-2"
+                        disabled={bayar.isPending}
+                        onClick={() => bayar.mutate(i.id)}
+                      >
+                        <CreditCard className="size-4" />{" "}
+                        {bayar.isPending ? "Memproses..." : `Bayar via ${gwLabel}`}
+                      </Button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -129,6 +152,16 @@ function PortalPage() {
                   {rupiah(belum.reduce((s, i) => s + Number(i.amount || 0), 0))}
                 </span>
               </p>
+              {online && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Pembayaran otomatis tersedia via <span className="font-medium">{gwLabel}</span>{" "}
+                  (QRIS, virtual account, e-wallet). Masa aktif diperpanjang otomatis setelah
+                  pembayaran berhasil.
+                </p>
+              )}
+              {bayar.data && !bayar.data.ok && (
+                <p className="mt-2 text-sm text-destructive">{bayar.data.error}</p>
+              )}
               {hasil.pay.qrisUrl ? (
                 <img
                   src={hasil.pay.qrisUrl}

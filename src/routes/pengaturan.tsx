@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi, Layers, Receipt } from "lucide-react";
+import { CheckCircle2, CreditCard, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -25,6 +25,12 @@ import {
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
+import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
+import {
+  defaultGatewayOptions,
+  type GatewayOptions,
+  type GatewayProvider,
+} from "@/lib/invoice-types";
 import {
   defaultHybrid,
   readHybrid,
@@ -67,6 +73,7 @@ function PengaturanPage() {
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
   const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
+  const [gw, setGw] = useState<GatewayOptions>(defaultGatewayOptions);
 
   useEffect(() => {
     setForm(readCreds());
@@ -97,6 +104,9 @@ function PengaturanPage() {
     void invoiceOptionsGet()
       .then((r) => setInv(r.options))
       .catch(() => undefined);
+    void gatewayOptionsGet()
+      .then((r) => setGw(r.options))
+      .catch(() => undefined);
   }, []);
 
   const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
@@ -109,6 +119,13 @@ function PengaturanPage() {
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
     writeHybrid(next);
+  };
+
+  const saveGateway = async (next: GatewayOptions, pesan?: string) => {
+    setGw(next);
+    const res = await gatewayOptionsSave({ data: { options: next } });
+    if (!res.ok) toast.error("Pengaturan payment gateway gagal disimpan");
+    else if (pesan) toast.success(pesan);
   };
 
   const patchAccount = (role: BillingRole, patch: Partial<AccountForm>) =>
@@ -454,6 +471,130 @@ function PengaturanPage() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <CreditCard className="size-4 text-primary" /> Payment Gateway (Midtrans / Tripay)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Bila aktif, pelanggan bisa membayar tagihan langsung dari halaman{" "}
+                <span className="mono-num text-foreground">/portal</span> (QRIS, virtual account,
+                e-wallet). Masa aktif diperpanjang otomatis begitu webhook pembayaran diterima.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="gwprov">Provider</Label>
+              <select
+                id="gwprov"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={gw.provider}
+                onChange={(e) => setGw({ ...gw, provider: e.target.value as GatewayProvider })}
+              >
+                <option value="none">Nonaktif (manual / QRIS statis)</option>
+                <option value="midtrans">Midtrans (Snap)</option>
+                <option value="tripay">Tripay</option>
+              </select>
+            </div>
+            <div className="flex items-end justify-between gap-3 rounded-md border border-border p-3">
+              <div>
+                <Label htmlFor="gwsand">Mode Sandbox (uji coba)</Label>
+                <p className="text-xs text-muted-foreground">Matikan untuk transaksi sungguhan.</p>
+              </div>
+              <Switch
+                id="gwsand"
+                checked={gw.sandbox}
+                onCheckedChange={(v) => setGw({ ...gw, sandbox: v })}
+              />
+            </div>
+
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="gwbase">URL Publik Panel</Label>
+              <Input
+                id="gwbase"
+                placeholder="https://najwa.ddns.net"
+                value={gw.baseUrl}
+                onChange={(e) => setGw({ ...gw, baseUrl: e.target.value })}
+              />
+              {gw.provider !== "none" && (
+                <p className="text-xs text-muted-foreground">
+                  Isi URL callback / webhook di dashboard {gw.provider === "midtrans" ? "Midtrans" : "Tripay"}{" "}
+                  dengan:{" "}
+                  <span className="mono-num break-all text-foreground">
+                    {(gw.baseUrl || "https://domain-anda") + "/api/public/pay-callback/" + gw.provider}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {gw.provider === "midtrans" && (
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="mtkey">Midtrans Server Key</Label>
+                <Input
+                  id="mtkey"
+                  type="password"
+                  placeholder="SB-Mid-server-xxxxxxxx"
+                  value={gw.midtransServerKey}
+                  onChange={(e) => setGw({ ...gw, midtransServerKey: e.target.value })}
+                />
+              </div>
+            )}
+
+            {gw.provider === "tripay" && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="tpapi">Tripay API Key</Label>
+                  <Input
+                    id="tpapi"
+                    type="password"
+                    value={gw.tripayApiKey}
+                    onChange={(e) => setGw({ ...gw, tripayApiKey: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tppriv">Tripay Private Key</Label>
+                  <Input
+                    id="tppriv"
+                    type="password"
+                    value={gw.tripayPrivateKey}
+                    onChange={(e) => setGw({ ...gw, tripayPrivateKey: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tpmc">Merchant Code</Label>
+                  <Input
+                    id="tpmc"
+                    placeholder="T00001"
+                    value={gw.tripayMerchantCode}
+                    onChange={(e) => setGw({ ...gw, tripayMerchantCode: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tpmethod">Channel Pembayaran</Label>
+                  <Input
+                    id="tpmethod"
+                    placeholder="QRIS"
+                    value={gw.tripayMethod}
+                    onChange={(e) => setGw({ ...gw, tripayMethod: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Contoh: QRIS, BRIVA, BCAVA, DANA, OVO, ALFAMART.
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className="sm:col-span-2">
+              <Button onClick={() => void saveGateway(gw, "Pengaturan payment gateway disimpan")}>
+                <Save className="size-4" /> Simpan Payment Gateway
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="lg:col-span-2">

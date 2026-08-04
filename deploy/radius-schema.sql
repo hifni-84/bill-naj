@@ -66,3 +66,8 @@ CREATE TABLE IF NOT EXISTS billing_invoice (
   KEY idx_status (status),
   KEY idx_due (due_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Kolom pembayaran online (Midtrans / Tripay). Diabaikan bila sudah ada.
+ALTER TABLE billing_invoice ADD COLUMN pay_provider VARCHAR(16) NOT NULL DEFAULT '';
+ALTER TABLE billing_invoice ADD COLUMN pay_ref VARCHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE billing_invoice ADD COLUMN pay_url VARCHAR(512) NOT NULL DEFAULT '';
