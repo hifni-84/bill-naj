@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi, Layers } from "lucide-react";
+import { CheckCircle2, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { mt } from "@/lib/hotspot";
 import type { Json, MtCreds } from "@/lib/mikrotik-types";
 import { emptyCreds, readCreds, syncCredsFromServer, writeCreds } from "@/lib/router-store";
@@ -22,6 +23,8 @@ import {
   type AppOptions,
 } from "@/lib/auth-store";
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
+import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import {
   defaultHybrid,
   readHybrid,
@@ -63,6 +66,7 @@ function PengaturanPage() {
   const [accounts, setAccounts] = useState<Record<BillingRole, AccountForm>>(initialAccounts);
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
+  const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
 
   useEffect(() => {
     setForm(readCreds());
@@ -90,7 +94,17 @@ function PengaturanPage() {
     void syncHybridFromServer().then((remote) => {
       if (remote) setHybrid(remote);
     });
+    void invoiceOptionsGet()
+      .then((r) => setInv(r.options))
+      .catch(() => undefined);
   }, []);
+
+  const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
+    setInv(next);
+    const res = await invoiceOptionsSave({ data: { options: next } });
+    if (!res.ok) toast.error("Pengaturan tagihan gagal disimpan");
+    else if (pesan) toast.success(pesan);
+  };
 
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
