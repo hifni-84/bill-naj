@@ -16,6 +16,8 @@ export type Invoice = {
   created_at: string;
   paid_at: string | null;
   note: string;
+  /** Nomor WhatsApp pelanggan (dari data voucher/user) */
+  phone?: string;
 };
 
 export type InvoiceOptions = {
