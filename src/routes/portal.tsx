@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, CreditCard, Gauge, QrCode, Search, Wifi } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CreditCard,
+  Gauge,
+  QrCode,
+  Search,
+  Wifi,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +31,8 @@ export const Route = createFileRoute("/portal")({
       { property: "og:title", content: "Portal Pelanggan — Cek Tagihan Internet" },
       {
         property: "og:description",
-        content: "Masukkan username untuk melihat masa aktif dan tagihan perpanjangan paket 30 hari.",
+        content:
+          "Masukkan username untuk melihat masa aktif dan tagihan perpanjangan paket 30 hari.",
       },
     ],
   }),

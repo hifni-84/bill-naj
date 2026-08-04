@@ -165,7 +165,10 @@ function PengaturanPage() {
   }, []);
 
   const publicBase = (() => {
-    const host = pub.host.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const host = pub.host
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/+$/, "");
     const scheme = pub.https ? "https" : "http";
     const port = pub.port.trim();
     return `${scheme}://${host}${port ? `:${port}` : ""}`;
@@ -602,8 +605,8 @@ function PengaturanPage() {
               <p className="mt-1 max-w-xl text-xs text-muted-foreground">
                 Setiap user hotspot maupun PPPoE dengan paket masa aktif 30 hari akan otomatis
                 ditagih sehari sebelum masa aktifnya habis. Pelanggan melihat tagihan dan QRIS
-                pembayaran di halaman publik <span className="mono-num text-foreground">/portal</span>
-                .
+                pembayaran di halaman publik{" "}
+                <span className="mono-num text-foreground">/portal</span>.
               </p>
             </div>
             <Switch
@@ -927,10 +930,12 @@ function PengaturanPage() {
               />
               {gw.provider !== "none" && (
                 <p className="text-xs text-muted-foreground">
-                  Isi URL callback / webhook di dashboard {gw.provider === "midtrans" ? "Midtrans" : "Tripay"}{" "}
-                  dengan:{" "}
+                  Isi URL callback / webhook di dashboard{" "}
+                  {gw.provider === "midtrans" ? "Midtrans" : "Tripay"} dengan:{" "}
                   <span className="mono-num break-all text-foreground">
-                    {(gw.baseUrl || "https://domain-anda") + "/api/public/pay-callback/" + gw.provider}
+                    {(gw.baseUrl || "https://domain-anda") +
+                      "/api/public/pay-callback/" +
+                      gw.provider}
                   </span>
                 </p>
               )}

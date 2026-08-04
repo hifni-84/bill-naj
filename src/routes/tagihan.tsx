@@ -46,7 +46,8 @@ export const Route = createFileRoute("/tagihan")({
       { property: "og:title", content: "Tagihan Otomatis — NAJWA_BILLING" },
       {
         property: "og:description",
-        content: "Kelola tagihan perpanjangan paket 30 hari hotspot & PPPoE beserta konfirmasi pembayaran.",
+        content:
+          "Kelola tagihan perpanjangan paket 30 hari hotspot & PPPoE beserta konfirmasi pembayaran.",
       },
     ],
   }),
@@ -190,9 +191,7 @@ function TagihanPage() {
         </div>
         <div className="panel p-5">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Nilai Tertagih</p>
-          <p className="mono-num mt-2 text-2xl font-semibold text-primary">
-            {rupiah(totalUnpaid)}
-          </p>
+          <p className="mono-num mt-2 text-2xl font-semibold text-primary">{rupiah(totalUnpaid)}</p>
         </div>
         <div className="panel p-5">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Total Tagihan</p>
