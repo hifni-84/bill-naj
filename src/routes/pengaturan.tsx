@@ -22,7 +22,12 @@ import {
   type BillingRole,
   type AppOptions,
 } from "@/lib/auth-store";
-import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import {
+  billingAccountGet,
+  billingAccountSave,
+  settingsGet,
+  settingsSave,
+} from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
@@ -60,6 +65,14 @@ export const Route = createFileRoute("/pengaturan")({
 
 type AccountForm = { username: string; password: string; confirm: string; configured: boolean };
 
+type PublicAccess = { host: string; port: string; https: boolean };
+const defaultPublicAccess: PublicAccess = { host: "", port: "", https: false };
+const publicKeys = {
+  host: "billing.public.host",
+  port: "billing.public.port",
+  https: "billing.public.https",
+};
+
 const roleLabels: Record<BillingRole, string> = {
   admin: "Admin",
   reseller: "Reseller",
@@ -79,6 +92,7 @@ function PengaturanPage() {
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
   const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
   const [gw, setGw] = useState<GatewayOptions>(defaultGatewayOptions);
+  const [pub, setPub] = useState<PublicAccess>(defaultPublicAccess);
 
   useEffect(() => {
     setForm(readCreds());
@@ -112,7 +126,31 @@ function PengaturanPage() {
     void gatewayOptionsGet()
       .then((r) => setGw(r.options))
       .catch(() => undefined);
+    void settingsGet()
+      .then((r) => {
+        if (!r.ok) return;
+        setPub({
+          host: r.data[publicKeys.host] ?? "",
+          port: r.data[publicKeys.port] ?? "",
+          https: r.data[publicKeys.https] === "1",
+        });
+      })
+      .catch(() => undefined);
   }, []);
+
+  const savePublic = async () => {
+    const res = await settingsSave({
+      data: {
+        entries: {
+          [publicKeys.host]: pub.host.trim(),
+          [publicKeys.port]: pub.port.trim(),
+          [publicKeys.https]: pub.https ? "1" : "0",
+        },
+      },
+    });
+    if ("ok" in res && res.ok === false) toast.error("Alamat publik gagal disimpan");
+    else toast.success("Alamat publik billing tersimpan");
+  };
 
   const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
     setInv(next);
