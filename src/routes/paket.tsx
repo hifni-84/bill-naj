@@ -77,6 +77,7 @@ function PaketPage() {
   const [pShared, setPShared] = useState("1");
   const [pService, setPService] = useState<"hotspot" | "pppoe">("hotspot");
   const [pIntegrate, setPIntegrate] = useState(true);
+  const [pPortal, setPPortal] = useState(false);
 
   return (
     <>
@@ -182,6 +183,17 @@ function PaketPage() {
                 </span>
               </div>
             </div>
+            <div className="grid gap-2 md:col-span-3 xl:col-span-6">
+              <Label htmlFor="p-portal">Tampilkan di Portal Pelanggan</Label>
+              <div className="flex items-center gap-3 rounded-md border border-border/60 px-3 py-2">
+                <Switch id="p-portal" checked={pPortal} onCheckedChange={setPPortal} />
+                <span className="text-xs text-muted-foreground">
+                  {pPortal
+                    ? "Paket ini bisa dibeli pelanggan di halaman /portal dan voucher dibuat otomatis setelah pembayaran."
+                    : "Paket hanya untuk admin, tidak tampil di portal pelanggan."}
+                </span>
+              </div>
+            </div>
             <div className="flex items-end xl:col-span-6">
               <Button
                 disabled={!pName.trim() || savePlan.isPending}
@@ -203,6 +215,7 @@ function PaketPage() {
                     ),
                     shared_users: Number(pShared) || 1,
                     service: pService,
+                    portal: pPortal ? 1 : 0,
                   };
                   savePlan.mutate(plan, {
                     onSuccess: () => {
@@ -231,6 +244,7 @@ function PaketPage() {
                 <TableHead>Shared</TableHead>
                 <TableHead>Harga Modal</TableHead>
                 <TableHead>Harga Jual</TableHead>
+                <TableHead>Portal</TableHead>
                 <TableHead className="w-24 text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -244,6 +258,26 @@ function PaketPage() {
                   <TableCell className="mono-num">{p.shared_users}</TableCell>
                   <TableCell className="mono-num">{formatIDR(p.cost_price ?? 0)}</TableCell>
                   <TableCell className="mono-num">{formatIDR(p.price)}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={!!p.portal}
+                      aria-label={`Tampilkan paket ${p.name} di portal pelanggan`}
+                      onCheckedChange={(v) =>
+                        savePlan.mutate(
+                          { ...p, portal: v ? 1 : 0 },
+                          {
+                            onSuccess: () =>
+                              toast.success(
+                                v
+                                  ? `Paket "${p.name}" tampil di portal pelanggan`
+                                  : `Paket "${p.name}" disembunyikan dari portal`,
+                              ),
+                            onError: (e: Error) => toast.error(e.message),
+                          },
+                        )
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       size="icon"
@@ -267,7 +301,7 @@ function PaketPage() {
               ))}
               {(plans.data ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     Belum ada paket.
                   </TableCell>
                 </TableRow>
