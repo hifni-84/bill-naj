@@ -14,11 +14,10 @@ import { mt } from "@/lib/hotspot";
 import type { Json, MtCreds } from "@/lib/mikrotik-types";
 import { emptyCreds, readCreds, syncCredsFromServer, writeCreds } from "@/lib/router-store";
 import {
-  defaultAccount,
   defaultOptions,
-  readAccount,
   readOptions,
   writeOptions,
+  type BillingRole,
   type AppOptions,
 } from "@/lib/auth-store";
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
@@ -49,11 +48,18 @@ export const Route = createFileRoute("/pengaturan")({
   component: PengaturanPage,
 });
 
+type AccountForm = { username: string; password: string; confirm: string; configured: boolean };
+
+const roleLabels: Record<BillingRole, string> = { admin: "Admin", reseller: "Reseller" };
+const initialAccounts: Record<BillingRole, AccountForm> = {
+  admin: { username: "admin", password: "", confirm: "", configured: false },
+  reseller: { username: "reseller", password: "", confirm: "", configured: false },
+};
+
 function PengaturanPage() {
   const [form, setForm] = useState<MtCreds>(emptyCreds);
   const [info, setInfo] = useState<string | null>(null);
-  const [acc, setAcc] = useState(defaultAccount);
-  const [pass2, setPass2] = useState("");
+  const [accounts, setAccounts] = useState<Record<BillingRole, AccountForm>>(initialAccounts);
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
 
@@ -62,20 +68,20 @@ function PengaturanPage() {
     void syncCredsFromServer().then((remote) => {
       if (remote) setForm(remote);
     });
-    const a = readAccount();
-    setAcc(a);
-    setPass2(a.password);
     void billingAccountGet()
-      .then(async (remote) => {
-        if (remote.configured) {
-          setAcc({ username: remote.username, password: "" });
-          setPass2("");
-          return;
-        }
-        // Migrasikan akun lama dari browser pertama ke server satu kali.
-        if (a.username !== defaultAccount.username || a.password !== defaultAccount.password) {
-          await billingAccountSave({ data: a });
-        }
+      .then((remote) => {
+        setAccounts((current) => {
+          const next = { ...current };
+          for (const item of remote.accounts) {
+            next[item.role] = {
+              username: item.username,
+              password: "",
+              confirm: "",
+              configured: item.configured,
+            };
+          }
+          return next;
+        });
       })
       .catch(() => undefined);
     setOpts(readOptions());
@@ -90,7 +96,11 @@ function PengaturanPage() {
     writeHybrid(next);
   };
 
-  const saveAccount = async () => {
+  const patchAccount = (role: BillingRole, patch: Partial<AccountForm>) =>
+    setAccounts((current) => ({ ...current, [role]: { ...current[role], ...patch } }));
+
+  const saveAccount = async (role: BillingRole) => {
+    const acc = accounts[role];
     if (!acc.username.trim()) {
       toast.error("Username tidak boleh kosong");
       return;
@@ -99,17 +109,16 @@ function PengaturanPage() {
       toast.error("Password tidak boleh kosong");
       return;
     }
-    if (acc.password !== pass2) {
+    if (acc.password !== acc.confirm) {
       toast.error("Konfirmasi password tidak sama");
       return;
     }
     try {
       await billingAccountSave({
-        data: { username: acc.username.trim(), password: acc.password },
+        data: { role, username: acc.username.trim(), password: acc.password },
       });
-      setAcc((current) => ({ ...current, password: "" }));
-      setPass2("");
-      toast.success("Akun login tersimpan di server dan berlaku untuk semua jaringan");
+      patchAccount(role, { password: "", confirm: "", configured: true });
+      toast.success(`Akun ${roleLabels[role]} tersimpan dan berlaku untuk semua jaringan`);
     } catch {
       toast.error("Akun gagal disimpan ke server");
     }
@@ -214,37 +223,56 @@ function PengaturanPage() {
 
         <div className="panel p-6">
           <h2 className="mb-4 text-sm font-semibold">Akun Login Billing</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="au">Username</Label>
-              <Input
-                id="au"
-                value={acc.username}
-                onChange={(e) => setAcc({ ...acc, username: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ap">Password Baru</Label>
-              <Input
-                id="ap"
-                type="password"
-                value={acc.password}
-                onChange={(e) => setAcc({ ...acc, password: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="ap2">Ulangi Password</Label>
-              <Input
-                id="ap2"
-                type="password"
-                value={pass2}
-                onChange={(e) => setPass2(e.target.value)}
-              />
-            </div>
+          <div className="grid gap-6">
+            {(["admin", "reseller"] as BillingRole[]).map((role) => {
+              const acc = accounts[role];
+              return (
+                <div key={role} className="border-t border-border pt-5 first:border-0 first:pt-0">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Akun {roleLabels[role]}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {acc.configured
+                        ? "Password tersimpan"
+                        : role === "admin"
+                          ? "Default: admin / admin"
+                          : "Belum diatur"}
+                    </span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${role}-u`}>Username</Label>
+                      <Input
+                        id={`${role}-u`}
+                        value={acc.username}
+                        onChange={(e) => patchAccount(role, { username: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${role}-p`}>Password Baru</Label>
+                      <Input
+                        id={`${role}-p`}
+                        type="password"
+                        value={acc.password}
+                        onChange={(e) => patchAccount(role, { password: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:col-span-2">
+                      <Label htmlFor={`${role}-p2`}>Ulangi Password</Label>
+                      <Input
+                        id={`${role}-p2`}
+                        type="password"
+                        value={acc.confirm}
+                        onChange={(e) => patchAccount(role, { confirm: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <Button className="mt-4" onClick={() => void saveAccount(role)}>
+                    <Save className="size-4" /> Simpan Akun {roleLabels[role]}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
-          <Button className="mt-5" onClick={() => void saveAccount()}>
-            <Save className="size-4" /> Simpan Akun
-          </Button>
 
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-border pt-5">
             <div>

@@ -2,42 +2,85 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { getSettings, saveSettings } from "./radius.server";
 
-const USERNAME_KEY = "billing.auth.username";
-const PASSWORD_HASH_KEY = "billing.auth.passwordHash";
-const PASSWORD_SALT_KEY = "billing.auth.passwordSalt";
+export type BillingRole = "admin" | "reseller";
+export const billingRoles: BillingRole[] = ["admin", "reseller"];
+
+const defaults: Record<BillingRole, { username: string; password: string | null }> = {
+  admin: { username: "admin", password: "admin" },
+  reseller: { username: "reseller", password: null },
+};
+
+function keys(role: BillingRole) {
+  return {
+    username: `billing.auth.${role}.username`,
+    hash: `billing.auth.${role}.passwordHash`,
+    salt: `billing.auth.${role}.passwordSalt`,
+  };
+}
+
+// Kunci lama (tanpa peran) tetap dibaca sebagai akun admin.
+const legacy = {
+  username: "billing.auth.username",
+  hash: "billing.auth.passwordHash",
+  salt: "billing.auth.passwordSalt",
+};
 
 function passwordHash(password: string, salt: string) {
   return createHash("sha256").update(`${salt}:${password}`).digest("hex");
 }
 
-export async function getBillingAccount() {
-  const settings = await getSettings();
+function readRole(settings: Record<string, string>, role: BillingRole) {
+  const k = keys(role);
+  const useLegacy = role === "admin" && !settings[k.hash] && Boolean(settings[legacy.hash]);
+  const src = useLegacy ? legacy : k;
   return {
-    username: settings[USERNAME_KEY] ?? "admin",
-    configured: Boolean(settings[PASSWORD_HASH_KEY] && settings[PASSWORD_SALT_KEY]),
+    username: settings[src.username] ?? defaults[role].username,
+    hash: settings[src.hash],
+    salt: settings[src.salt],
   };
+}
+
+export async function getBillingAccounts() {
+  const settings = await getSettings();
+  return billingRoles.map((role) => {
+    const entry = readRole(settings, role);
+    return {
+      role,
+      username: entry.username,
+      configured: Boolean(entry.hash && entry.salt),
+    };
+  });
 }
 
 export async function verifyBillingAccount(username: string, password: string) {
   const settings = await getSettings();
-  const storedUsername = settings[USERNAME_KEY] ?? "admin";
-  const salt = settings[PASSWORD_SALT_KEY];
-  const storedHash = settings[PASSWORD_HASH_KEY];
+  const supplied = username.trim();
 
-  if (username.trim() !== storedUsername) return false;
-  if (!salt || !storedHash) return password === "admin";
+  for (const role of billingRoles) {
+    const entry = readRole(settings, role);
+    if (supplied !== entry.username) continue;
 
-  const supplied = Buffer.from(passwordHash(password, salt), "hex");
-  const expected = Buffer.from(storedHash, "hex");
-  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+    if (!entry.hash || !entry.salt) {
+      const fallback = defaults[role].password;
+      if (fallback && password === fallback) return { ok: true as const, role };
+      continue;
+    }
+
+    const a = Buffer.from(passwordHash(password, entry.salt), "hex");
+    const b = Buffer.from(entry.hash, "hex");
+    if (a.length === b.length && timingSafeEqual(a, b)) return { ok: true as const, role };
+  }
+
+  return { ok: false as const, role: null };
 }
 
-export async function saveBillingAccount(username: string, password: string) {
+export async function saveBillingAccount(role: BillingRole, username: string, password: string) {
+  const k = keys(role);
   const salt = randomBytes(16).toString("hex");
   await saveSettings({
-    [USERNAME_KEY]: username.trim(),
-    [PASSWORD_SALT_KEY]: salt,
-    [PASSWORD_HASH_KEY]: passwordHash(password, salt),
+    [k.username]: username.trim(),
+    [k.salt]: salt,
+    [k.hash]: passwordHash(password, salt),
   });
   return { ok: true as const };
 }

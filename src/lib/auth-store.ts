@@ -4,10 +4,12 @@ import { billingAccountLogin } from "./radius.functions";
 
 const ACCOUNT_KEY = "billing.account";
 const SESSION_KEY = "billing.session";
+const ROLE_KEY = "billing.role";
 const OPTS_KEY = "billing.options";
 const EVENT = "billing-auth-changed";
 
 export type Account = { username: string; password: string };
+export type BillingRole = "admin" | "reseller";
 export type AppOptions = { autoDeleteExpired: boolean };
 
 export const defaultAccount: Account = { username: "admin", password: "admin" };
@@ -70,22 +72,33 @@ export async function login(username: string, password: string) {
   const result = await billingAccountLogin({ data: { username: username.trim(), password } });
   if (!result.ok) return false;
   window.localStorage.setItem(SESSION_KEY, "1");
+  if (result.role) window.localStorage.setItem(ROLE_KEY, result.role);
   window.dispatchEvent(new Event(EVENT));
   return true;
 }
 
 export function logout() {
   window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(ROLE_KEY);
   window.dispatchEvent(new Event(EVENT));
+}
+
+export function currentRole(): BillingRole {
+  if (typeof window === "undefined") return "admin";
+  return window.localStorage.getItem(ROLE_KEY) === "reseller" ? "reseller" : "admin";
 }
 
 /** Hook aman-hidrasi untuk status login. */
 export function useAuth() {
   const [authed, setAuthed] = useState(false);
+  const [role, setRole] = useState<BillingRole>("admin");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const sync = () => setAuthed(isLoggedIn());
+    const sync = () => {
+      setAuthed(isLoggedIn());
+      setRole(currentRole());
+    };
     sync();
     setReady(true);
     window.addEventListener(EVENT, sync);
@@ -96,7 +109,7 @@ export function useAuth() {
     };
   }, []);
 
-  return { authed, ready };
+  return { authed, ready, role };
 }
 
 export function useOptions() {

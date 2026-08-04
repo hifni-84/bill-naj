@@ -145,20 +145,20 @@ export const settingsSave = createServerFn({ method: "POST" })
   });
 
 export const billingAccountGet = createServerFn({ method: "GET" }).handler(async () => {
-  const { getBillingAccount } = await import("./billing-auth.server");
-  return getBillingAccount();
+  const { getBillingAccounts } = await import("./billing-auth.server");
+  return { accounts: await getBillingAccounts() };
 });
 
 export const billingAccountLogin = createServerFn({ method: "POST" })
   .inputValidator((d: { username: string; password: string }) => d)
   .handler(async ({ data }) => {
     const { verifyBillingAccount } = await import("./billing-auth.server");
-    return { ok: await verifyBillingAccount(data.username, data.password) };
+    return verifyBillingAccount(data.username, data.password);
   });
 
 export const billingAccountSave = createServerFn({ method: "POST" })
-  .inputValidator((d: { username: string; password: string }) => d)
+  .inputValidator((d: { role: "admin" | "reseller"; username: string; password: string }) => d)
   .handler(async ({ data }) => {
     const { saveBillingAccount } = await import("./billing-auth.server");
-    return saveBillingAccount(data.username, data.password);
+    return saveBillingAccount(data.role, data.username, data.password);
   });
