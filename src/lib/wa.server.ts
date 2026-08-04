@@ -87,6 +87,21 @@ export async function sendWa(to: string, message: string, opt?: WaOptions) {
   const o = opt ?? (await waOptions());
   const target = normalizeWaNumber(to);
   if (!target) throw new Error("Nomor WhatsApp pelanggan belum diisi");
+
+  if (o.provider === "self") {
+    const base = (o.apiUrl || "http://127.0.0.1:3100").replace(/\/+$/, "");
+    const res = await fetch(`${base}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: target, message }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || json.ok === false) {
+      throw new Error(json.error || `Self-hosted WA gagal (${res.status})`);
+    }
+    return { ok: true as const, info: "Self-hosted (QR)" };
+  }
+
   if (!o.token && o.provider !== "custom") throw new Error("Token WhatsApp gateway belum diisi");
 
   if (o.provider === "fonnte") {
@@ -130,6 +145,54 @@ export async function sendWa(to: string, message: string, opt?: WaOptions) {
   });
   if (!res.ok) throw new Error(`Gateway gagal (${res.status}): ${await res.text()}`);
   return { ok: true as const, info: "Custom gateway" };
+}
+
+/* --------- Helper untuk provider self-hosted (QR scan) --------- */
+
+export type WaSelfStatus = {
+  state: "open" | "qr" | "close" | "connecting" | "offline";
+  user: string;
+  hasQr: boolean;
+};
+
+/** Cek status koneksi gateway self-hosted. */
+export async function selfWaStatus(apiUrl?: string): Promise<WaSelfStatus> {
+  const o = await waOptions();
+  const base = (apiUrl || o.apiUrl || "http://127.0.0.1:3100").replace(/\/+$/, "");
+  try {
+    const res = await fetch(`${base}/status`, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return { state: "offline", user: "", hasQr: false };
+    const j = (await res.json()) as { state?: string; user?: string; qr?: boolean };
+    const st = j.state;
+    return {
+      state: st === "open" || st === "qr" || st === "close" || st === "connecting" ? st : "offline",
+      user: j.user ?? "",
+      hasQr: !!j.qr,
+    };
+  } catch {
+    return { state: "offline", user: "", hasQr: false };
+  }
+}
+
+/** Ambil QR code (data URL PNG) dari gateway self-hosted. */
+export async function selfWaQr(apiUrl?: string): Promise<string> {
+  const o = await waOptions();
+  const base = (apiUrl || o.apiUrl || "http://127.0.0.1:3100").replace(/\/+$/, "");
+  const res = await fetch(`${base}/qr`, { signal: AbortSignal.timeout(4000) });
+  const j = (await res.json().catch(() => ({}))) as { qr?: string; error?: string };
+  if (!res.ok || !j.qr) throw new Error(j.error || "QR belum tersedia");
+  return j.qr;
+}
+
+/** Logout / pindai ulang di gateway self-hosted. */
+export async function selfWaLogout(apiUrl?: string): Promise<void> {
+  const o = await waOptions();
+  const base = (apiUrl || o.apiUrl || "http://127.0.0.1:3100").replace(/\/+$/, "");
+  const res = await fetch(`${base}/logout`, {
+    method: "POST",
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`Logout gagal (${res.status})`);
 }
 
 /** Kirim tagihan tertentu ke nomor pelanggan (link ke portal pembayaran). */
