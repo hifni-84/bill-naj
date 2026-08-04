@@ -140,6 +140,7 @@ function VoucherPage() {
   const [vChar, setVChar] = useState("campur");
   const [vNas, setVNas] = useState("semua");
   const [vMode, setVMode] = useState<"sama" | "beda">("sama");
+  const [vPhone, setVPhone] = useState("");
 
   // form tambah user manual
   const [mUser, setMUser] = useState("");
@@ -148,6 +149,13 @@ function VoucherPage() {
   const [mNas, setMNas] = useState("semua");
   const [mPaid, setMPaid] = useState<"paid" | "unpaid">("paid");
   const [mService, setMService] = useState<"hotspot" | "pppoe">("hotspot");
+  const [mPhone, setMPhone] = useState("");
+
+  /** Paket bulanan (masa aktif >= 30 hari) butuh nomor WhatsApp untuk kirim tagihan. */
+  const bulanan = (nama: string) => {
+    const p = (plans.data ?? []).find((x) => x.name === nama);
+    return (p?.validity_seconds ?? 0) >= 30 * 86400 - 3600;
+  };
 
   const [cari, setCari] = useState("");
   const [filter, setFilter] = useState("semua");
@@ -361,6 +369,21 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
+            {bulanan(vPlan) && (
+              <div className="flex min-w-0 flex-col gap-2">
+                <Label htmlFor="v-wa">No. WhatsApp Pelanggan</Label>
+                <Input
+                  id="v-wa"
+                  inputMode="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={vPhone}
+                  onChange={(e) => setVPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dipakai untuk kirim tagihan paket bulanan (H-1 sebelum expired).
+                </p>
+              </div>
+            )}
             <div className="col-span-full flex justify-end pt-1 md:col-span-3 xl:col-span-6">
               <Button
                 className="w-full sm:w-auto"
@@ -384,6 +407,7 @@ function VoucherPage() {
                       service: p.service,
                       paid: vPaid === "paid",
                       nas: vNas === "semua" ? "" : vNas,
+                      phone: bulanan(p.name) ? vPhone.trim() : "",
                     };
                   });
                   createUsers.mutate(
@@ -496,6 +520,21 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
+            {bulanan(mPlan) && (
+              <div className="flex min-w-0 flex-col gap-2">
+                <Label htmlFor="m-wa">No. WhatsApp Pelanggan</Label>
+                <Input
+                  id="m-wa"
+                  inputMode="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={mPhone}
+                  onChange={(e) => setMPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tagihan otomatis paket bulanan dikirim ke nomor ini.
+                </p>
+              </div>
+            )}
             <div className="col-span-full flex justify-end pt-1">
               <Button
                 className="w-full sm:w-auto"
@@ -515,6 +554,7 @@ function VoucherPage() {
                           service: p.service,
                           paid: mPaid === "paid",
                           nas: mNas === "semua" ? "" : mNas,
+                          phone: bulanan(p.name) ? mPhone.trim() : "",
                         },
                       ],
                     },
@@ -532,6 +572,7 @@ function VoucherPage() {
                         ]);
                         setMUser("");
                         setMPass("");
+                        setMPhone("");
                       },
                       onError: (e: Error) => toast.error(e.message),
                     },
