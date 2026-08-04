@@ -230,7 +230,9 @@ export const billingAccountLogin = createServerFn({ method: "POST" })
   });
 
 export const billingAccountSave = createServerFn({ method: "POST" })
-  .inputValidator((d: { role: "admin" | "reseller"; username: string; password: string }) => d)
+  .inputValidator(
+    (d: { role: "admin" | "reseller" | "demo"; username: string; password: string }) => d,
+  )
   .handler(async ({ data }) => {
     const { saveBillingAccount } = await import("./billing-auth.server");
     return saveBillingAccount(data.role, data.username, data.password);
