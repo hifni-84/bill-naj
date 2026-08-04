@@ -95,6 +95,7 @@ export const invoiceLookup = createServerFn({ method: "POST" })
         invoices: [] as Invoice[],
         expires_at: null as string | null,
         plan: "",
+        usage: { download: 0, upload: 0, total: 0, sessionTime: 0 },
         pay: {
           merchant: defaultInvoiceOptions.merchant,
           qrisUrl: "",
