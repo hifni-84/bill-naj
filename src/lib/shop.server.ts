@@ -100,20 +100,21 @@ export async function createOrder(planName: string, phone = "") {
      VALUES (?,?,?,?, 'pending', NOW())`,
     [code, plan.name, normalizeWaNumber(phone), amount],
   );
-  const idRow = await query<{ id: number }>(
-    "SELECT id FROM billing_order WHERE code = ? LIMIT 1",
-    [code],
-  );
+  const idRow = await query<{ id: number }>("SELECT id FROM billing_order WHERE code = ? LIMIT 1", [
+    code,
+  ]);
   const id = Number(idRow[0]?.id ?? (res as unknown as { insertId?: number }).insertId ?? 0);
   if (!id) throw new Error("Pesanan gagal dibuat");
 
   const ref = `ORD-${id}-${Date.now().toString(36)}`;
   const { checkoutUrl } = await import("./payment.server");
   const pay = await checkoutUrl(ref, amount, { plan: plan.name, username: code });
-  await query(
-    "UPDATE billing_order SET pay_provider = ?, pay_ref = ?, pay_url = ? WHERE id = ?",
-    [pay.provider, ref, pay.url, id],
-  );
+  await query("UPDATE billing_order SET pay_provider = ?, pay_ref = ?, pay_url = ? WHERE id = ?", [
+    pay.provider,
+    ref,
+    pay.url,
+    id,
+  ]);
   return { code, url: pay.url, amount, plan: plan.name };
 }
 

@@ -195,11 +195,7 @@ function PortalPage() {
                   <span className="mono-num text-sm font-semibold text-primary">
                     {formatIDR(p.price)}
                   </span>
-                  <Button
-                    size="sm"
-                    disabled={pesan.isPending}
-                    onClick={() => pesan.mutate(p.name)}
-                  >
+                  <Button size="sm" disabled={pesan.isPending} onClick={() => pesan.mutate(p.name)}>
                     <CreditCard className="size-4" /> {pesan.isPending ? "Memproses..." : "Beli"}
                   </Button>
                 </div>
