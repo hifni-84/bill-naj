@@ -5,6 +5,7 @@ import { CheckCircle2, Save, Wifi, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
+import { BackupRestore } from "@/components/BackupRestore";
 import { PageHeader } from "@/components/Shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -356,6 +357,10 @@ function PengaturanPage() {
 
         <div className="lg:col-span-2">
           <NasManager />
+        </div>
+
+        <div className="lg:col-span-2">
+          <BackupRestore />
         </div>
 
         <div className="panel p-6 text-sm leading-relaxed text-muted-foreground">
