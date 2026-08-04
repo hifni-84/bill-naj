@@ -254,7 +254,7 @@ function VoucherPage() {
         <div className="panel p-5">
           <h2 className="mb-4 text-sm font-semibold">Generate Voucher ke Database</h2>
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Paket</Label>
               <Select value={vPlan} onValueChange={setVPlan}>
                 <SelectTrigger>
@@ -269,7 +269,7 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="v-jml">Jumlah</Label>
               <Input
                 id="v-jml"
@@ -278,7 +278,7 @@ function VoucherPage() {
                 onChange={(e) => setVJumlah(e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Karakter Voucher</Label>
               <Select value={vChar} onValueChange={setVChar}>
                 <SelectTrigger>
@@ -293,7 +293,7 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="v-pj">Panjang Kode</Label>
               <Input
                 id="v-pj"
@@ -302,7 +302,7 @@ function VoucherPage() {
                 onChange={(e) => setVPanjang(e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="v-pre">Awalan</Label>
               <Input
                 id="v-pre"
@@ -311,7 +311,7 @@ function VoucherPage() {
                 onChange={(e) => setVPrefix(e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="v-bt">Batch</Label>
               <Input
                 id="v-bt"
@@ -320,7 +320,7 @@ function VoucherPage() {
                 onChange={(e) => setVBatch(e.target.value)}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>NAS (Router)</Label>
               <Select value={vNas} onValueChange={setVNas}>
                 <SelectTrigger>
@@ -336,7 +336,7 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Status Pembayaran</Label>
               <Select value={vPaid} onValueChange={(v) => setVPaid(v as "paid" | "unpaid")}>
                 <SelectTrigger>
@@ -348,7 +348,7 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Model User</Label>
               <Select value={vMode} onValueChange={(v) => setVMode(v as "sama" | "beda")}>
                 <SelectTrigger>
@@ -423,7 +423,7 @@ function VoucherPage() {
         <div className="panel p-5">
           <h2 className="mb-4 text-sm font-semibold">Tambah User Manual</h2>
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Layanan</Label>
               <Select
                 value={mService}
@@ -441,15 +441,15 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="m-user">Username</Label>
               <Input id="m-user" value={mUser} onChange={(e) => setMUser(e.target.value)} />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="m-pass">Password</Label>
               <Input id="m-pass" value={mPass} onChange={(e) => setMPass(e.target.value)} />
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Paket</Label>
               <Select value={mPlan} onValueChange={setMPlan}>
                 <SelectTrigger>
@@ -467,7 +467,7 @@ function VoucherPage() {
               </Select>
             </div>
 
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>NAS (Router)</Label>
               <Select value={mNas} onValueChange={setMNas}>
                 <SelectTrigger>
@@ -483,7 +483,7 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label>Status Pembayaran</Label>
               <Select value={mPaid} onValueChange={(v) => setMPaid(v as "paid" | "unpaid")}>
                 <SelectTrigger>
