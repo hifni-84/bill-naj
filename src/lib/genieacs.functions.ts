@@ -84,3 +84,81 @@ export const acsReboot = createServerFn({ method: "POST" })
       return { ok: false as const, error: (e as Error).message };
     }
   });
+
+export const acsFactoryReset = createServerFn({ method: "POST" })
+  .inputValidator((d: { creds: AcsCreds; deviceId: string }) => d)
+  .handler(async ({ data }) => {
+    const { factoryResetAcsDevice } = await import("./genieacs.server");
+    try {
+      return await factoryResetAcsDevice(data.creds, data.deviceId);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
+export const acsSetParams = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      creds: AcsCreds;
+      deviceId: string;
+      values: Array<{ path: string; value: string; type?: string }>;
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    const { setAcsParams } = await import("./genieacs.server");
+    try {
+      return await setAcsParams(data.creds, data.deviceId, data.values);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
+export const acsSetVlan = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      creds: AcsCreds;
+      deviceId: string;
+      input: { wanPath: string; vlan: string; priority: string; vlanPath?: string };
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    const { setAcsVlan } = await import("./genieacs.server");
+    try {
+      return await setAcsVlan(data.creds, data.deviceId, data.input);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
+export const acsAddObject = createServerFn({ method: "POST" })
+  .inputValidator((d: { creds: AcsCreds; deviceId: string; objectName: string }) => d)
+  .handler(async ({ data }) => {
+    const { addAcsObject } = await import("./genieacs.server");
+    try {
+      return await addAcsObject(data.creds, data.deviceId, data.objectName);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
+export const acsDeleteObject = createServerFn({ method: "POST" })
+  .inputValidator((d: { creds: AcsCreds; deviceId: string; objectName: string }) => d)
+  .handler(async ({ data }) => {
+    const { deleteAcsObject } = await import("./genieacs.server");
+    try {
+      return await deleteAcsObject(data.creds, data.deviceId, data.objectName);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
+export const acsParams = createServerFn({ method: "POST" })
+  .inputValidator((d: { creds: AcsCreds; deviceId: string }) => d)
+  .handler(async ({ data }) => {
+    const { listAcsParams } = await import("./genieacs.server");
+    try {
+      return { ok: true as const, params: await listAcsParams(data.creds, data.deviceId) };
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message, params: [] };
+    }
+  });
