@@ -332,7 +332,10 @@ export async function report(): Promise<RadiusReport> {
 
   for (const row of rows) {
     if (row.first_login) used += 1;
-    const saleTime = Number(row.paid) === 1 ? row.created_at : row.first_login;
+    // Voucher yang sudah dipakai dicatat sebagai pendapatan pada tanggal login
+    // pertama. Untuk voucher Paid yang belum pernah dipakai, tetap gunakan
+    // tanggal pembuatannya agar penjualan langsung masih masuk laporan.
+    const saleTime = row.first_login ?? (Number(row.paid) === 1 ? row.created_at : null);
     if (!saleTime) continue;
     const date = localDateKey(saleTime);
     if (!date) continue;
