@@ -610,13 +610,57 @@ function PengaturanPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="qris">URL Gambar QRIS Statis</Label>
+                <Label htmlFor="qris">Gambar QRIS Statis</Label>
                 <Input
                   id="qris"
                   placeholder="https://domain.com/qris.png"
                   value={inv.qrisUrl}
                   onChange={(e) => setInv({ ...inv, qrisUrl: e.target.value })}
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    id="qris-file"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void uploadQris(f);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={qrisBusy}
+                    onClick={() => document.getElementById("qris-file")?.click()}
+                  >
+                    <Upload className="size-4" /> {qrisBusy ? "Mengunggah…" : "Unggah Gambar QRIS"}
+                  </Button>
+                  {inv.qrisUrl.startsWith("/api/public/qris.png") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={qrisBusy}
+                      onClick={() => void removeQris()}
+                    >
+                      <Trash2 className="size-4" /> Hapus
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Unggah langsung dari perangkat (PNG/JPG/WEBP, maks 3 MB) — gambar disimpan di
+                  server dan URL-nya terisi otomatis. Bisa juga tempel URL manual.
+                </p>
+                {inv.qrisUrl && (
+                  <img
+                    src={inv.qrisUrl}
+                    alt="Pratinjau QRIS pembayaran"
+                    className="mt-1 size-32 rounded-md border border-border bg-white object-contain p-1"
+                  />
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="wa">WhatsApp Konfirmasi</Label>
