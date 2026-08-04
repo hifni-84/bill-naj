@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -58,7 +59,10 @@ function PaketPage() {
   const delPlan = useRadiusMutation((name: string) => radiusDeletePlan({ data: { name } }));
 
   const syncPlan = async (plan: RadiusPlan) => {
-    if (!hybrid.enabled || !hybrid.syncProfile) return;
+    if (!creds.host?.trim()) {
+      toast.error("Alamat router MikroTik belum diatur di Pengaturan");
+      return;
+    }
     const res = await pushPlanToMikrotik(creds, plan);
     if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke MikroTik`);
     else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
@@ -72,6 +76,7 @@ function PaketPage() {
   const [pUnit, setPUnit] = useState<"menit" | "jam" | "hari" | "bulan">("hari");
   const [pShared, setPShared] = useState("1");
   const [pService, setPService] = useState<"hotspot" | "pppoe">("hotspot");
+  const [pIntegrate, setPIntegrate] = useState(true);
 
   return (
     <>
@@ -163,6 +168,20 @@ function PaketPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2 md:col-span-3 xl:col-span-6">
+              <Label htmlFor="p-int">Integrasi MikroTik</Label>
+              <div className="flex items-center gap-3 rounded-md border border-border/60 px-3 py-2">
+                <Switch id="p-int" checked={pIntegrate} onCheckedChange={setPIntegrate} />
+                <span className="text-xs text-muted-foreground">
+                  {pIntegrate
+                    ? "Paket juga dibuat sebagai profile di router MikroTik saat disimpan."
+                    : "Paket hanya disimpan di RADIUS, tidak dikirim ke router."}
+                  {pIntegrate && !hybrid.enabled
+                    ? " (Mode hybrid belum aktif di Pengaturan — profile dikirim tetap saat disimpan.)"
+                    : ""}
+                </span>
+              </div>
+            </div>
             <div className="flex items-end xl:col-span-6">
               <Button
                 disabled={!pName.trim() || savePlan.isPending}
@@ -189,7 +208,7 @@ function PaketPage() {
                     onSuccess: () => {
                       toast.success("Paket disimpan");
                       setPName("");
-                      void syncPlan(plan);
+                      if (pIntegrate) void syncPlan(plan);
                     },
                     onError: (e: Error) => toast.error(e.message),
                   });
@@ -212,7 +231,7 @@ function PaketPage() {
                 <TableHead>Shared</TableHead>
                 <TableHead>Harga Modal</TableHead>
                 <TableHead>Harga Jual</TableHead>
-                <TableHead className="w-16 text-right">Aksi</TableHead>
+                <TableHead className="w-24 text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -226,6 +245,15 @@ function PaketPage() {
                   <TableCell className="mono-num">{formatIDR(p.cost_price ?? 0)}</TableCell>
                   <TableCell className="mono-num">{formatIDR(p.price)}</TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Integrasikan paket ${p.name} ke MikroTik`}
+                      title="Kirim ke MikroTik sebagai profile"
+                      onClick={() => void syncPlan(p)}
+                    >
+                      <UploadCloud className="size-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
