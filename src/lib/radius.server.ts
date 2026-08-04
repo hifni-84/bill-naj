@@ -208,6 +208,9 @@ export type NewUser = {
 export async function createUsers(users: NewUser[]) {
   await ensurePaidColumn();
   await ensureNasColumn();
+  const { ensurePhoneColumn } = await import("./wa.server");
+  const { normalizeWaNumber } = await import("./invoice-types");
+  await ensurePhoneColumn();
   let created = 0;
   for (const u of users) {
     // Harga dan layanan harus mengikuti paket di database. Jangan bergantung
@@ -220,11 +223,11 @@ export async function createUsers(users: NewUser[]) {
     if (!plan) throw new Error(`Paket ${u.plan} tidak ditemukan`);
     const price = Number(plan.price) || 0;
     await query(
-      `INSERT INTO billing_voucher (username, password, plan, batch, price, service, paid, nas, created_at)
-       VALUES (?,?,?,?,?,?,?,?,NOW())
+      `INSERT INTO billing_voucher (username, password, plan, batch, price, service, paid, nas, phone, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,NOW())
        ON DUPLICATE KEY UPDATE password=VALUES(password), plan=VALUES(plan),
          batch=VALUES(batch), price=VALUES(price), service=VALUES(service), paid=VALUES(paid),
-         nas=VALUES(nas)`,
+         nas=VALUES(nas), phone=VALUES(phone)`,
       [
         u.username,
         u.password,
@@ -234,6 +237,7 @@ export async function createUsers(users: NewUser[]) {
         plan.service,
         u.paid === false ? 0 : 1,
         (u.nas ?? "").trim(),
+        normalizeWaNumber(u.phone ?? ""),
       ],
     );
     await query("DELETE FROM radcheck WHERE username = ?", [u.username]);
