@@ -1,5 +1,5 @@
 import type { AcsCreds } from "./genieacs-store";
-import type { AcsDevice, AcsWan, AcsWlan } from "./genieacs-types";
+import type { AcsDevice, AcsHost, AcsParam, AcsVlan, AcsWan, AcsWlan } from "./genieacs-types";
 
 type Flat = Record<string, unknown>;
 
@@ -82,17 +82,78 @@ function collectWlans(flat: Flat): AcsWlan[] {
     const band = pick(flat, `${root}.Standard`, `${root}.OperatingFrequencyBand`).includes("5")
       ? "5 GHz"
       : "2.4 GHz";
+    const ap = `Device.WiFi.AccessPoint.${index}`;
+    const channelPath = igd ? `${root}.Channel` : `Device.WiFi.Radio.${index}.Channel`;
+    const hiddenPath = igd ? `${root}.SSIDAdvertisementEnabled` : `${ap}.SSIDAdvertisementEnabled`;
+    const securityPath = igd ? `${root}.BeaconType` : `${ap}.Security.ModeEnabled`;
+    const clients = Number(
+      pick(
+        flat,
+        `${root}.TotalAssociations`,
+        `${root}.AssociatedDeviceNumberOfEntries`,
+        `${ap}.AssociatedDeviceNumberOfEntries`,
+      ) || 0,
+    );
     wlans.push({
       index,
+      root,
       ssidPath: path,
       ssid: String(flat[path] ?? ""),
       passwordPath,
       password: String(flat[passwordPath] ?? ""),
       enabled: String(pick(flat, `${root}.Enable`, `Device.WiFi.SSID.${index}.Enable`)) === "true",
       band,
+      channel: pick(flat, channelPath),
+      channelPath,
+      hidden: pick(flat, hiddenPath) === "false",
+      hiddenPath,
+      enablePath: `${root}.Enable`,
+      security: pick(flat, securityPath),
+      securityPath,
+      bssid: pick(flat, `${root}.BSSID`, `${root}.MACAddress`, `Device.WiFi.SSID.${index}.BSSID`),
+      clients,
     });
   }
   return wlans.sort((a, b) => Number(a.index) - Number(b.index));
+}
+
+function collectHosts(flat: Flat): AcsHost[] {
+  const hosts: AcsHost[] = [];
+  const seen = new Set<string>();
+  for (const path of Object.keys(flat)) {
+    const m = path.match(/^(.*Hosts\.Host\.(\d+))\./);
+    if (!m) continue;
+    const root = m[1]!;
+    if (seen.has(root)) continue;
+    seen.add(root);
+    hosts.push({
+      name: pick(flat, `${root}.HostName`) || "(tanpa nama)",
+      ip: pick(flat, `${root}.IPAddress`),
+      mac: pick(flat, `${root}.MACAddress`),
+      iface: pick(flat, `${root}.InterfaceType`, `${root}.Layer2Interface`),
+      active: pick(flat, `${root}.Active`) === "true",
+      lease: pick(flat, `${root}.LeaseTimeRemaining`),
+    });
+  }
+  return hosts;
+}
+
+function collectVlans(flat: Flat): AcsVlan[] {
+  const out: AcsVlan[] = [];
+  for (const path of Object.keys(flat)) {
+    if (!/(^|\.)(X_[^.]*_)?VLAN(ID|IDMark)?$/i.test(path) && !/VLANID$/i.test(path)) continue;
+    const value = String(flat[path] ?? "");
+    if (!value.length) continue;
+    const scope = /WANPPPConnection/.test(path)
+      ? "WAN PPPoE"
+      : /WANIPConnection/.test(path)
+        ? "WAN IP"
+        : /Ethernet|Bridge|LAN/i.test(path)
+          ? "LAN / Bridge"
+          : "Lainnya";
+    out.push({ path, value, scope });
+  }
+  return out;
 }
 
 function collectWans(flat: Flat): AcsWan[] {
@@ -120,6 +181,15 @@ function collectWans(flat: Flat): AcsWan[] {
       vlan: vlanKey ? String(flat[vlanKey] ?? "") : "",
       status: pick(flat, `${root}.ConnectionStatus`),
       enabled: pick(flat, `${root}.Enable`) === "true",
+      vlanPath: vlanKey ?? `${root}.X_VLANID`,
+      natEnabled: pick(flat, `${root}.NATEnabled`) === "true",
+      uptime: Number(pick(flat, `${root}.Uptime`) || 0),
+      dns: pick(flat, `${root}.DNSServers`),
+      gateway: pick(flat, `${root}.DefaultGateway`),
+      netmask: pick(flat, `${root}.SubnetMask`),
+      macAddress: pick(flat, `${root}.MACAddress`),
+      bytesSent: Number(pick(flat, `${root}.Stats.EthernetBytesSent`) || 0),
+      bytesReceived: Number(pick(flat, `${root}.Stats.EthernetBytesReceived`) || 0),
     });
   }
   return wans;
@@ -154,6 +224,19 @@ function mapDevice(raw: Record<string, unknown>): AcsDevice {
   );
   const pppKey = Object.keys(flat).find((k) => /WANPPPConnection\.\d+\.Username$/.test(k));
   const informTime = lastInform ? new Date(lastInform).getTime() : 0;
+  const txKey = Object.keys(flat).find((k) => /TXPower|TxPower|TXOpticalPower/i.test(k));
+  const tempKey = Object.keys(flat).find((k) => /Temperature/i.test(k));
+  const macKey = Object.keys(flat).find((k) => /MACAddress$/i.test(k));
+  const ponKey = Object.keys(flat).find((k) => /PONMode|GponMode|X_.*_PON/i.test(k));
+  const regKey = Object.keys(flat).find((k) => /RegistrationState|OnlineState/i.test(k));
+  const pppStatusKey = Object.keys(flat).find((k) =>
+    /WANPPPConnection\.\d+\.ConnectionStatus$/.test(k),
+  );
+  const wlans = collectWlans(flat);
+  const hosts = collectHosts(flat);
+  const hostsActive = hosts.filter((h) => h.active).length || hosts.length;
+  const wifiClients = wlans.reduce((a, w) => a + w.clients, 0);
+  const tagsRaw = (raw as { _tags?: unknown })._tags;
 
   return {
     id,
@@ -166,16 +249,59 @@ function mapDevice(raw: Record<string, unknown>): AcsDevice {
       "InternetGatewayDevice.DeviceInfo.SoftwareVersion",
       "Device.DeviceInfo.SoftwareVersion",
     ),
+    hardware: pick(
+      flat,
+      "InternetGatewayDevice.DeviceInfo.HardwareVersion",
+      "Device.DeviceInfo.HardwareVersion",
+    ),
+    oui: id.split("-")[0] ?? "",
+    productClass: pick(
+      flat,
+      "InternetGatewayDevice.DeviceInfo.ProductClass",
+      "Device.DeviceInfo.ProductClass",
+    ),
+    mac: macKey ? String(flat[macKey] ?? "") : "",
+    lanIp: pick(
+      flat,
+      "InternetGatewayDevice.LANDevice.1.LANHostConfigManagement.IPInterface.1.IPInterfaceIPAddress",
+      "Device.IP.Interface.1.IPv4Address.1.IPAddress",
+    ),
+    pppStatus: pppStatusKey ? String(flat[pppStatusKey] ?? "") : "",
     ip: ipKey ? String(flat[ipKey] ?? "") : "",
     ppp: pppKey ? String(flat[pppKey] ?? "") : "",
     uptime: Number(
       pick(flat, "InternetGatewayDevice.DeviceInfo.UpTime", "Device.DeviceInfo.UpTime") || 0,
     ),
     rxPower: rxKey ? String(flat[rxKey] ?? "") : "",
+    txPower: txKey ? String(flat[txKey] ?? "") : "",
+    temperature: tempKey ? String(flat[tempKey] ?? "") : "",
+    cpuUsage: pick(
+      flat,
+      "InternetGatewayDevice.DeviceInfo.ProcessStatus.CPUUsage",
+      "Device.DeviceInfo.ProcessStatus.CPUUsage",
+    ),
+    memoryFree: pick(
+      flat,
+      "InternetGatewayDevice.DeviceInfo.MemoryStatus.Free",
+      "Device.DeviceInfo.MemoryStatus.Free",
+    ),
+    memoryTotal: pick(
+      flat,
+      "InternetGatewayDevice.DeviceInfo.MemoryStatus.Total",
+      "Device.DeviceInfo.MemoryStatus.Total",
+    ),
+    ponMode: ponKey ? String(flat[ponKey] ?? "") : "",
+    registrationState: regKey ? String(flat[regKey] ?? "") : "",
+    tags: Array.isArray(tagsRaw) ? tagsRaw.map(String) : [],
     lastInform,
     online: informTime > 0 && Date.now() - informTime < 10 * 60 * 1000,
-    wlans: collectWlans(flat),
+    hostsActive,
+    wifiClients,
+    totalUsers: hostsActive + wifiClients,
+    wlans,
     wans: collectWans(flat),
+    hosts,
+    vlans: collectVlans(flat),
   };
 }
 
@@ -214,6 +340,72 @@ export async function rebootAcsDevice(creds: AcsCreds, deviceId: string) {
   return { ok: true as const };
 }
 
+export async function factoryResetAcsDevice(creds: AcsCreds, deviceId: string) {
+  await postTask(creds, deviceId, { name: "factoryReset" });
+  return { ok: true as const };
+}
+
+/** Set parameter apa pun (generik) */
+export async function setAcsParams(
+  creds: AcsCreds,
+  deviceId: string,
+  values: Array<{ path: string; value: string; type?: string }>,
+) {
+  await postTask(creds, deviceId, {
+    name: "setParameterValues",
+    parameterValues: values.map((v) => [v.path, v.value, v.type ?? "xsd:string"]),
+  });
+  return { ok: true as const };
+}
+
+export async function addAcsObject(creds: AcsCreds, deviceId: string, objectName: string) {
+  await postTask(creds, deviceId, {
+    name: "addObject",
+    objectName: objectName.replace(/\.$/, ""),
+  });
+  return { ok: true as const };
+}
+
+export async function deleteAcsObject(creds: AcsCreds, deviceId: string, objectName: string) {
+  await postTask(creds, deviceId, { name: "deleteObject", objectName });
+  return { ok: true as const };
+}
+
+/** Set VLAN pada WAN yang sudah ada; mencoba beberapa nama parameter vendor */
+export async function setAcsVlan(
+  creds: AcsCreds,
+  deviceId: string,
+  input: { wanPath: string; vlan: string; priority: string; vlanPath?: string },
+) {
+  const root = input.wanPath.replace(/\.$/, "");
+  const paths = input.vlanPath
+    ? [input.vlanPath]
+    : [`${root}.X_VLANID`, `${root}.X_ZTE-COM_VLANID`, `${root}.X_HW_VLAN`, `${root}.VLANIDMark`];
+  const values = paths.map((p) => ({ path: p, value: input.vlan, type: "xsd:unsignedInt" }));
+  if (input.priority) {
+    values.push({
+      path: `${root}.X_VLANPriority`,
+      value: input.priority,
+      type: "xsd:unsignedInt",
+    });
+  }
+  await setAcsParams(creds, deviceId, values);
+  return { ok: true as const };
+}
+
+/** Ambil seluruh parameter perangkat (untuk penjelajah parameter) */
+export async function listAcsParams(creds: AcsCreds, deviceId: string): Promise<AcsParam[]> {
+  const raw = (await acsFetch(
+    creds,
+    `/devices/?query=${encodeURIComponent(JSON.stringify({ _id: deviceId }))}`,
+  )) as Record<string, unknown>[];
+  const dev = Array.isArray(raw) ? raw[0] : null;
+  if (!dev) throw new Error("Perangkat tidak ditemukan");
+  const flat = flatten(dev as Record<string, unknown>);
+  return Object.keys(flat)
+    .sort()
+    .map((path) => ({ path, value: String(flat[path] ?? ""), writable: true }));
+}
 
 export type AcsWanInput = {
   /** path induk, diakhiri titik, mis. ...WANConnectionDevice.1.WANPPPConnection. */
@@ -252,9 +444,7 @@ export async function addAcsWan(creds: AcsCreds, deviceId: string, input: AcsWan
   const idx = Math.max(...indexes);
   const root = `${parent}${idx}`;
 
-  const values: Array<[string, string, string]> = [
-    [`${root}.Enable`, "true", "xsd:boolean"],
-  ];
+  const values: Array<[string, string, string]> = [[`${root}.Enable`, "true", "xsd:boolean"]];
   if (input.name) values.push([`${root}.Name`, input.name, "xsd:string"]);
   if (input.vlan) values.push([`${root}.X_VLANID`, input.vlan, "xsd:unsignedInt"]);
   if (input.kind === "PPPoE") {
@@ -280,4 +470,3 @@ export async function deleteAcsWan(creds: AcsCreds, deviceId: string, path: stri
   await postTask(creds, deviceId, { name: "deleteObject", objectName: path });
   return { ok: true as const };
 }
-

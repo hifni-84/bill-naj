@@ -10,22 +10,17 @@ import {
   Wifi,
   Settings2,
   Globe,
-  Trash2,
+  Users,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
+import { Tr069DeviceDialog } from "@/components/Tr069DeviceDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -33,14 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  acsAddWan,
-  acsDeleteWan,
-  acsDevices,
-  acsReboot,
-  acsRefresh,
-  acsSetWifi,
-} from "@/lib/genieacs.functions";
+import { acsDevices, acsReboot, acsRefresh } from "@/lib/genieacs.functions";
 import { readAcs, useAcs, writeAcs, type AcsCreds } from "@/lib/genieacs-store";
 import type { AcsDevice } from "@/lib/genieacs-types";
 
@@ -51,12 +39,13 @@ export const Route = createFileRoute("/tr069")({
       {
         name: "description",
         content:
-          "Monitor semua ONU ZTE, Huawei, dan VSOL melalui GenieACS API serta ubah SSID dan password WiFi pelanggan dari satu panel.",
+          "Kelola semua parameter TR-069 ONU ZTE, Huawei, dan VSOL: tambah WAN, atur VLAN, ganti SSID, dan pantau total user aktif dari satu panel.",
       },
       { property: "og:title", content: "TR-069 GenieACS — NAJWA_BILLING" },
       {
         property: "og:description",
-        content: "Monitoring ONU dan pengaturan SSID/password WiFi via TR-069 GenieACS.",
+        content:
+          "Panel TR-069: add WAN, add VLAN, ganti SSID/password, host aktif, dan editor parameter lengkap.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -80,24 +69,7 @@ function Tr069Page() {
 
   const [cari, setCari] = useState("");
   const [merek, setMerek] = useState("all");
-  const [edit, setEdit] = useState<AcsDevice | null>(null);
-  const [ssid, setSsid] = useState("");
-  const [pass, setPass] = useState("");
-  const [wlanIdx, setWlanIdx] = useState(0);
-  const [wanDev, setWanDev] = useState<AcsDevice | null>(null);
-  const [wan, setWan] = useState({
-    parentPath: "",
-    kind: "PPPoE" as "PPPoE" | "IP",
-    name: "",
-    username: "",
-    password: "",
-    vlan: "",
-    addressingType: "DHCP",
-    ip: "",
-    netmask: "",
-    gateway: "",
-    dns: "",
-  });
+  const [detail, setDetail] = useState<{ device: AcsDevice; tab: string } | null>(null);
 
   const devices = useQuery({
     queryKey: ["acs-devices", creds.url],
@@ -120,26 +92,13 @@ function Tr069Page() {
   }, [list, cari, merek]);
 
   const online = list.filter((d) => d.online).length;
+  const totalUsers = list.reduce((a, d) => a + d.totalUsers, 0);
+  const totalWan = list.reduce((a, d) => a + d.wans.length, 0);
 
-  const simpanWifi = useMutation({
-    mutationFn: async () => {
-      if (!edit) return;
-      const w = edit.wlans[wlanIdx];
-      if (!w) throw new Error("WLAN tidak ditemukan pada perangkat ini");
-      const values: Array<{ path: string; value: string }> = [];
-      if (ssid.trim()) values.push({ path: w.ssidPath, value: ssid.trim() });
-      if (pass.trim()) values.push({ path: w.passwordPath, value: pass.trim() });
-      if (!values.length) throw new Error("Isi SSID atau password terlebih dahulu");
-      const res = await acsSetWifi({ data: { creds: readAcs(), deviceId: edit.id, values } });
-      if (!res.ok) throw new Error((res as { error?: string }).error ?? "Gagal mengirim tugas");
-    },
-    onSuccess: () => {
-      toast.success("Perubahan WiFi dikirim ke ONU");
-      setEdit(null);
-      void devices.refetch();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  // jaga agar dialog memakai data terbaru setelah refetch
+  const detailDevice = detail
+    ? (list.find((d) => d.id === detail.device.id) ?? detail.device)
+    : null;
 
   const aksi = useMutation({
     mutationFn: async (p: { id: string; tipe: "refresh" | "reboot" }) => {
@@ -155,75 +114,15 @@ function Tr069Page() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const simpanWan = useMutation({
-    mutationFn: async () => {
-      if (!wanDev) return;
-      if (!wan.parentPath) throw new Error("Pilih tipe/slot WAN terlebih dahulu");
-      if (wan.kind === "PPPoE" && !wan.username.trim())
-        throw new Error("Username PPPoE wajib diisi");
-      const res = await acsAddWan({
-        data: { creds: readAcs(), deviceId: wanDev.id, wan },
-      });
-      if (!res.ok) throw new Error((res as { error?: string }).error ?? "Gagal menambah WAN");
-    },
-    onSuccess: () => {
-      toast.success("WAN baru dikirim ke ONU");
-      setWanDev(null);
-      void devices.refetch();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const hapusWan = useMutation({
-    mutationFn: async (p: { deviceId: string; path: string }) => {
-      const res = await acsDeleteWan({ data: { creds: readAcs(), ...p } });
-      if (!res.ok) throw new Error((res as { error?: string }).error ?? "Gagal menghapus WAN");
-    },
-    onSuccess: () => {
-      toast.success("WAN dihapus");
-      void devices.refetch();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  /** Kandidat path induk untuk WAN baru pada perangkat terpilih */
-  function wanParents(d: AcsDevice) {
-    const set = new Map<string, string>();
-    for (const w of d.wans) set.set(w.parentPath, w.kind);
-    if (!set.size) {
-      set.set("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.", "PPPoE");
-      set.set("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.", "IP");
-    }
-    return [...set.entries()].map(([path, kind]) => ({ path, kind: kind as "PPPoE" | "IP" }));
-  }
-
-  function bukaWan(d: AcsDevice) {
-    const parents = wanParents(d);
-    const first = parents[0]!;
-    setWan({
-      parentPath: first.path,
-      kind: first.kind,
-      name: "",
-      username: "",
-      password: "",
-      vlan: "",
-      addressingType: "DHCP",
-      ip: "",
-      netmask: "",
-      gateway: "",
-      dns: "",
-    });
-    setWanDev(d);
-  }
-
   return (
     <div>
       <PageHeader
         title="TR-069 · GenieACS API"
-        description="Monitor ONU ZTE, Huawei, dan VSOL serta ubah SSID/password WiFi pelanggan."
+        description="Semua parameter ONU: add WAN, add VLAN, ganti SSID/password, user aktif, dan editor parameter."
         action={
           <Button variant="outline" onClick={() => void devices.refetch()} disabled={!configured}>
-            <RefreshCw className={`size-4 ${devices.isFetching ? "animate-spin" : ""}`} /> Muat ulang
+            <RefreshCw className={`size-4 ${devices.isFetching ? "animate-spin" : ""}`} /> Muat
+            ulang
           </Button>
         }
       />
@@ -233,7 +132,7 @@ function Tr069Page() {
           <Settings2 className="size-4 text-primary" /> Koneksi GenieACS NBI
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-2">
+          <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
             <Label>URL API</Label>
             <Input
               placeholder="http://192.168.1.10:7557"
@@ -241,14 +140,14 @@ function Tr069Page() {
               onChange={(e) => setForm({ ...conf, url: e.target.value })}
             />
           </div>
-          <div>
+          <div className="flex min-w-0 flex-col gap-2">
             <Label>Username</Label>
             <Input
               value={conf.username}
               onChange={(e) => setForm({ ...conf, username: e.target.value })}
             />
           </div>
-          <div>
+          <div className="flex min-w-0 flex-col gap-2">
             <Label>Password</Label>
             <Input
               type="password"
@@ -275,18 +174,20 @@ function Tr069Page() {
         </p>
       )}
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Total ONU", value: list.length, icon: Cpu },
           { label: "Online", value: online, icon: Wifi },
           { label: "Offline", value: list.length - online, icon: Power },
+          { label: "Total user aktif", value: totalUsers, icon: Users },
+          { label: "Total WAN", value: totalWan, icon: Globe },
         ].map((s) => (
           <div key={s.label} className="panel flex items-center gap-3 p-4">
             <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-primary">
               <s.icon className="size-4" />
             </span>
-            <div>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted-foreground">{s.label}</p>
               <p className="text-lg font-semibold">{s.value}</p>
             </div>
           </div>
@@ -327,6 +228,8 @@ function Tr069Page() {
                 <th className="py-2 pr-3">Model</th>
                 <th className="py-2 pr-3">SSID</th>
                 <th className="py-2 pr-3">PPPoE / IP</th>
+                <th className="py-2 pr-3">VLAN</th>
+                <th className="py-2 pr-3">User aktif</th>
                 <th className="py-2 pr-3">RX Power</th>
                 <th className="py-2 pr-3">Uptime</th>
                 <th className="py-2 pr-3">Status</th>
@@ -343,14 +246,19 @@ function Tr069Page() {
                   <td className="py-2 pr-3">{d.model || "-"}</td>
                   <td className="py-2 pr-3">{d.wlans[0]?.ssid || "-"}</td>
                   <td className="py-2 pr-3">{d.ppp || d.ip || "-"}</td>
+                  <td className="py-2 pr-3">
+                    {d.wans
+                      .map((w) => w.vlan)
+                      .filter(Boolean)
+                      .join(", ") || "-"}
+                  </td>
+                  <td className="py-2 pr-3">{d.totalUsers}</td>
                   <td className="py-2 pr-3">{d.rxPower || "-"}</td>
                   <td className="py-2 pr-3">{fmtUptime(d.uptime)}</td>
                   <td className="py-2 pr-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
-                        d.online
-                          ? "bg-primary/15 text-primary"
-                          : "bg-muted text-muted-foreground"
+                        d.online ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {d.online ? "Online" : "Offline"}
@@ -361,15 +269,26 @@ function Tr069Page() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        title="Ubah SSID / password"
-                        onClick={() => {
-                          setEdit(d);
-                          setWlanIdx(0);
-                          setSsid(d.wlans[0]?.ssid ?? "");
-                          setPass("");
-                        }}
+                        title="Ubah SSID / password WiFi"
+                        onClick={() => setDetail({ device: d, tab: "wifi" })}
                       >
                         <Wifi className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Kelola WAN & VLAN"
+                        onClick={() => setDetail({ device: d, tab: "wan" })}
+                      >
+                        <Globe className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Semua parameter TR-069"
+                        onClick={() => setDetail({ device: d, tab: "info" })}
+                      >
+                        <SlidersHorizontal className="size-4" />
                       </Button>
                       <Button
                         size="icon"
@@ -382,27 +301,18 @@ function Tr069Page() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        title="Kelola / tambah WAN"
-                        onClick={() => bukaWan(d)}
-                      >
-                        <Globe className="size-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
                         title="Reboot ONU"
                         onClick={() => aksi.mutate({ id: d.id, tipe: "reboot" })}
                       >
                         <Power className="size-4" />
                       </Button>
-
                     </div>
                   </td>
                 </tr>
               ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={11} className="py-8 text-center text-sm text-muted-foreground">
                     {configured
                       ? "Belum ada ONU yang terdaftar di GenieACS."
                       : "Isi URL GenieACS terlebih dahulu."}
@@ -414,221 +324,15 @@ function Tr069Page() {
         </div>
       </section>
 
-      <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ubah WiFi — {edit?.serial}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>WLAN</Label>
-              <Select
-                value={String(wlanIdx)}
-                onValueChange={(v) => {
-                  const i = Number(v);
-                  setWlanIdx(i);
-                  setSsid(edit?.wlans[i]?.ssid ?? "");
-                  setPass("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(edit?.wlans ?? []).map((w, i) => (
-                    <SelectItem key={w.ssidPath} value={String(i)}>
-                      WLAN {w.index} · {w.band} · {w.ssid || "(kosong)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>SSID baru</Label>
-              <Input value={ssid} onChange={(e) => setSsid(e.target.value)} />
-            </div>
-            <div>
-              <Label>Password baru</Label>
-              <Input
-                value={pass}
-                onChange={(e) => setPass(e.target.value)}
-                placeholder="Kosongkan bila tidak diubah"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEdit(null)}>
-              Batal
-            </Button>
-            <Button onClick={() => simpanWifi.mutate()} disabled={simpanWifi.isPending}>
-              <Save className="size-4" /> Simpan ke ONU
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!wanDev} onOpenChange={(o) => !o && setWanDev(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>WAN — {wanDev?.serial}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">WAN terpasang</p>
-            {(wanDev?.wans ?? []).map((w) => (
-              <div
-                key={w.path}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-xs"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {w.name} · {w.kind}
-                    {w.vlan ? ` · VLAN ${w.vlan}` : ""}
-                  </p>
-                  <p className="truncate text-muted-foreground">
-                    {w.username || w.ip || "-"} · {w.status || (w.enabled ? "Enabled" : "Disabled")}
-                  </p>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  title="Hapus WAN"
-                  onClick={() =>
-                    wanDev && hapusWan.mutate({ deviceId: wanDev.id, path: w.path })
-                  }
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
-            {!wanDev?.wans.length && (
-              <p className="text-xs text-muted-foreground">Belum ada WAN terbaca pada ONU ini.</p>
-            )}
-          </div>
-
-          <div className="space-y-3 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Tambah WAN baru</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Tipe / Slot</Label>
-                <Select
-                  value={wan.parentPath}
-                  onValueChange={(v) => {
-                    const found = wanDev ? wanParents(wanDev).find((p) => p.path === v) : null;
-                    setWan((s) => ({ ...s, parentPath: v, kind: found?.kind ?? s.kind }));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih slot WAN" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(wanDev ? wanParents(wanDev) : []).map((p) => (
-                      <SelectItem key={p.path} value={p.path}>
-                        {p.kind} · {p.path.split(".").slice(-4, -1).join(".")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Nama WAN</Label>
-                <Input
-                  value={wan.name}
-                  onChange={(e) => setWan((s) => ({ ...s, name: e.target.value }))}
-                  placeholder="WAN_INTERNET"
-                />
-              </div>
-              <div>
-                <Label>VLAN ID</Label>
-                <Input
-                  value={wan.vlan}
-                  onChange={(e) => setWan((s) => ({ ...s, vlan: e.target.value }))}
-                  placeholder="Kosongkan bila tanpa VLAN"
-                />
-              </div>
-              {wan.kind === "PPPoE" ? (
-                <>
-                  <div>
-                    <Label>Username PPPoE</Label>
-                    <Input
-                      value={wan.username}
-                      onChange={(e) => setWan((s) => ({ ...s, username: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Password PPPoE</Label>
-                    <Input
-                      value={wan.password}
-                      onChange={(e) => setWan((s) => ({ ...s, password: e.target.value }))}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <Label>Mode IP</Label>
-                    <Select
-                      value={wan.addressingType}
-                      onValueChange={(v) => setWan((s) => ({ ...s, addressingType: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DHCP">DHCP</SelectItem>
-                        <SelectItem value="Static">Static</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {wan.addressingType === "Static" && (
-                    <>
-                      <div>
-                        <Label>IP Address</Label>
-                        <Input
-                          value={wan.ip}
-                          onChange={(e) => setWan((s) => ({ ...s, ip: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Subnet Mask</Label>
-                        <Input
-                          value={wan.netmask}
-                          onChange={(e) => setWan((s) => ({ ...s, netmask: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Gateway</Label>
-                        <Input
-                          value={wan.gateway}
-                          onChange={(e) => setWan((s) => ({ ...s, gateway: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>DNS</Label>
-                        <Input
-                          value={wan.dns}
-                          onChange={(e) => setWan((s) => ({ ...s, dns: e.target.value }))}
-                          placeholder="8.8.8.8,1.1.1.1"
-                        />
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWanDev(null)}>
-              Tutup
-            </Button>
-            <Button onClick={() => simpanWan.mutate()} disabled={simpanWan.isPending}>
-              <Save className="size-4" /> Tambah WAN
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      {detailDevice && (
+        <Tr069DeviceDialog
+          key={`${detailDevice.id}-${detail?.tab}`}
+          device={detailDevice}
+          defaultTab={detail?.tab ?? "info"}
+          onClose={() => setDetail(null)}
+          onChanged={() => void devices.refetch()}
+        />
+      )}
     </div>
   );
 }
