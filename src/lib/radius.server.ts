@@ -563,6 +563,17 @@ export async function expiredOnline(): Promise<string[]> {
 }
 
 /**
+ * Semua voucher yang sudah expired (data tetap tersimpan di billing).
+ * Dipakai untuk menghapus user/secret-nya di MikroTik saja.
+ */
+export async function expiredUsernames(): Promise<string[]> {
+  const rows = await query<{ username: string }>(
+    "SELECT username FROM billing_voucher WHERE expires_at IS NOT NULL AND expires_at <= NOW() LIMIT 1000",
+  );
+  return rows.map((r) => r.username);
+}
+
+/**
  * MODE HYBRID: voucher yang login lewat user lokal MikroTik tidak pernah
  * tercatat di radacct, sehingga billing tidak tahu voucher sudah dipakai.
  * Fungsi ini mencatat login pertama (dari uptime di router) + menghitung
