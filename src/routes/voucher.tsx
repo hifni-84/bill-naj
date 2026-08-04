@@ -53,6 +53,13 @@ import {
   TEMPLATE_DEFAULT,
   type VoucherTemplate,
 } from "@/lib/voucher-template";
+import {
+  pushVouchersToMikrotik,
+  removeVouchersFromMikrotik,
+  useHybrid,
+  type HybridVoucher,
+} from "@/lib/hybrid";
+import { useCreds } from "@/lib/router-store";
 
 export const Route = createFileRoute("/voucher")({
   head: () => ({
@@ -92,6 +99,21 @@ function VoucherPage() {
   const plans = useRadiusPlans();
   const users = useRadiusUsers();
   const nas = useRadiusNas();
+  const { hybrid } = useHybrid();
+  const { creds } = useCreds();
+
+  const syncKeRouter = async (list: HybridVoucher[]) => {
+    if (!hybrid.enabled || !hybrid.syncVoucher || !list.length) return;
+    const res = await pushVouchersToMikrotik(creds, list);
+    if (res.ok) toast.success(`${res.created + res.updated} voucher tersimpan juga di MikroTik`);
+    else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
+  };
+
+  const hapusDiRouter = async (usernames: string[]) => {
+    if (!hybrid.enabled || !hybrid.syncVoucher || !usernames.length) return;
+    const res = await removeVouchersFromMikrotik(creds, usernames);
+    if (!res.ok) toast.error(`Hapus di MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
+  };
 
   const delUsers = useRadiusMutation((usernames: string[]) =>
     radiusDeleteUsers({ data: { usernames } }),
