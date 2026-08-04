@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Save, Search, Trash2, Plus, RotateCcw } from "lucide-react";
+import { Save, Search, Trash2, Plus, RotateCcw, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
   acsDeleteWan,
   acsFactoryReset,
   acsParams,
+  acsDiscover,
   acsSetParams,
   acsSetVlan,
 } from "@/lib/genieacs.functions";
@@ -123,7 +124,7 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
     const q = cariParam.trim().toLowerCase();
     const all = params.data?.params ?? [];
     const f = q ? all.filter((p) => p.path.toLowerCase().includes(q)) : all;
-    return f.slice(0, 300);
+    return f.slice(0, 2000);
   }, [params.data, cariParam]);
 
   function wanParents(d: AcsDevice) {
