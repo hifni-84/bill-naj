@@ -22,6 +22,7 @@ import { Route as TemplateRouteImport } from './routes/template'
 import { Route as Tr069RouteImport } from './routes/tr069'
 import { Route as UserAktifRouteImport } from './routes/user-aktif'
 import { Route as VoucherRouteImport } from './routes/voucher'
+import { Route as VpnRouteImport } from './routes/vpn'
 import { Route as ApiPublicPayCallbackProviderRouteImport } from './routes/api/public/pay-callback.$provider'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const VoucherRoute = VoucherRouteImport.update({
   path: '/voucher',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VpnRoute = VpnRouteImport.update({
+  id: '/vpn',
+  path: '/vpn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPayCallbackProviderRoute =
   ApiPublicPayCallbackProviderRouteImport.update({
     id: '/api/public/pay-callback/$provider',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/vpn': typeof VpnRoute
   '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRoutesByTo {
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/vpn': typeof VpnRoute
   '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRoutesById {
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/vpn': typeof VpnRoute
   '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRouteTypes {
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/vpn'
     | '/api/public/pay-callback/$provider'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/vpn'
     | '/api/public/pay-callback/$provider'
   id:
     | '__root__'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/vpn'
     | '/api/public/pay-callback/$provider'
   fileRoutesById: FileRoutesById
 }
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   Tr069Route: typeof Tr069Route
   UserAktifRoute: typeof UserAktifRoute
   VoucherRoute: typeof VoucherRoute
+  VpnRoute: typeof VpnRoute
   ApiPublicPayCallbackProviderRoute: typeof ApiPublicPayCallbackProviderRoute
 }
 
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoucherRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vpn': {
+      id: '/vpn'
+      path: '/vpn'
+      fullPath: '/vpn'
+      preLoaderRoute: typeof VpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pay-callback/$provider': {
       id: '/api/public/pay-callback/$provider'
       path: '/api/public/pay-callback/$provider'
@@ -330,6 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   Tr069Route: Tr069Route,
   UserAktifRoute: UserAktifRoute,
   VoucherRoute: VoucherRoute,
+  VpnRoute: VpnRoute,
   ApiPublicPayCallbackProviderRoute: ApiPublicPayCallbackProviderRoute,
 }
 export const routeTree = rootRouteImport
