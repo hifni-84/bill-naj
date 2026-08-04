@@ -42,8 +42,24 @@ Environment=RADIUS_DB_USER=$DB_USER
 Environment=RADIUS_DB_PASSWORD=$DB_PASS
 Environment=RADIUS_DB_NAME=$DB_NAME
 CONF
+
+# Simpan juga ke .env aplikasi supaya jalan lewat systemd, pm2, atau manual.
+ENV_FILE="$APP_DIR/.env"
+touch "$ENV_FILE"
+sed -i '/^RADIUS_DB_/d' "$ENV_FILE"
+cat >>"$ENV_FILE" <<ENVV
+RADIUS_DB_HOST=127.0.0.1
+RADIUS_DB_PORT=3306
+RADIUS_DB_USER=$DB_USER
+RADIUS_DB_PASSWORD=$DB_PASS
+RADIUS_DB_NAME=$DB_NAME
+ENVV
+chmod 600 "$ENV_FILE"
+chown --reference="$APP_DIR" "$ENV_FILE" 2>/dev/null || true
+
 systemctl daemon-reload
-systemctl restart mikrotik-billing
+systemctl restart mikrotik-billing 2>/dev/null || true
+command -v pm2 >/dev/null && pm2 restart all --update-env >/dev/null 2>&1 || true
 
 echo "==> Menyamakan password di konfigurasi FreeRADIUS"
 RAD="/etc/freeradius/3.0"
