@@ -59,13 +59,26 @@ function detectVendor(text: string): AcsDevice["vendor"] {
 
 function collectWlans(flat: Flat): AcsWlan[] {
   const wlans: AcsWlan[] = [];
-  for (const path of Object.keys(flat)) {
-    const igd = path.match(/^(.*WLANConfiguration\.(\d+))\.SSID$/);
-    const tr181 = path.match(/^(Device\.WiFi\.SSID\.(\d+))\.SSID$/);
+  // Kumpulkan root WLAN dari parameter apa pun (SSID mungkin belum ter-fetch)
+  const roots = new Map<string, { index: string; igd: boolean }>();
+  for (const key of Object.keys(flat)) {
+    const igd = key.match(/^(.*WLANConfiguration\.(\d+))(\.|$)/);
+    const tr181 = key.match(/^(Device\.WiFi\.SSID\.(\d+))(\.|$)/);
     const m = igd ?? tr181;
     if (!m) continue;
-    const root = m[1]!;
-    const index = m[2]!;
+    if (!roots.has(m[1]!)) roots.set(m[1]!, { index: m[2]!, igd: Boolean(igd) });
+  }
+  for (const [root, meta] of roots) {
+    const { index, igd } = meta;
+    const ssidPath = `${root}.SSID`;
+    const ssid = pick(
+      flat,
+      ssidPath,
+      `${root}.X_ZTE-COM_SSID`,
+      `${root}.X_HW_SSID`,
+      `Device.WiFi.SSID.${index}.SSID`,
+      `Device.WiFi.SSID.${index}.Alias`,
+    );
     const pwdCandidates = igd
       ? [
           `${root}.KeyPassphrase`,
@@ -97,8 +110,8 @@ function collectWlans(flat: Flat): AcsWlan[] {
     wlans.push({
       index,
       root,
-      ssidPath: path,
-      ssid: String(flat[path] ?? ""),
+      ssidPath,
+      ssid,
       passwordPath,
       password: String(flat[passwordPath] ?? ""),
       enabled: String(pick(flat, `${root}.Enable`, `Device.WiFi.SSID.${index}.Enable`)) === "true",
