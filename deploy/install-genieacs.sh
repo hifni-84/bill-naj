@@ -9,7 +9,9 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "==> 1/6 Update paket & dependensi dasar"
-apt-get update -y
+# Buang repo MongoDB lama yang rusak (mis. noble/7.0 -> 404) agar apt tidak gagal
+rm -f /etc/apt/sources.list.d/mongodb-org-*.list
+apt-get update -y || true
 apt-get install -y curl gnupg ca-certificates ufw
 
 echo "==> 2/6 Pasang MongoDB"
