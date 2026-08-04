@@ -39,7 +39,11 @@ export const radiusDeletePlan = createServerFn({ method: "POST" })
 
 export const radiusUsers = createServerFn({ method: "GET" }).handler(async () => {
   const { listUsers } = await import("./radius.server");
-  return listUsers();
+  try {
+    return await listUsers();
+  } catch {
+    return [];
+  }
 });
 
 export const radiusCreateUsers = createServerFn({ method: "POST" })
@@ -71,12 +75,22 @@ export const radiusDeleteUsers = createServerFn({ method: "POST" })
 
 export const radiusSessions = createServerFn({ method: "GET" }).handler(async () => {
   const { listSessions } = await import("./radius.server");
-  return listSessions();
+  try {
+    return await listSessions();
+  } catch {
+    return [];
+  }
 });
 
 export const radiusReport = createServerFn({ method: "GET" }).handler(async () => {
   const { report } = await import("./radius.server");
-  return report();
+  try {
+    return await report();
+  } catch {
+    return { daily: [], monthly: [], total: 0, totalVoucher: 0, byPlan: [] } as Awaited<
+      ReturnType<typeof report>
+    >;
+  }
 });
 
 export const radiusMaintenance = createServerFn({ method: "POST" })
@@ -102,7 +116,11 @@ export const radiusMaintenance = createServerFn({ method: "POST" })
 
 export const radiusNasList = createServerFn({ method: "GET" }).handler(async () => {
   const { listNas } = await import("./radius.server");
-  return listNas();
+  try {
+    return await listNas();
+  } catch {
+    return [];
+  }
 });
 
 export const radiusSaveNas = createServerFn({ method: "POST" })
