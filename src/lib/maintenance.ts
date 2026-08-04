@@ -19,7 +19,7 @@ import {
 } from "./mikrotik-types";
 
 /** Pemeriksaan cepat supaya login pertama langsung tercatat. */
-export const MAINTENANCE_INTERVAL_MS = 30 * 1000;
+export const MAINTENANCE_INTERVAL_MS = 60 * 1000;
 
 /** Masa aktif voucher (detik) dari limit-uptime user atau session-timeout profil. */
 function voucherLifetime(u: HotspotUser, profiles: HotspotProfile[]) {
