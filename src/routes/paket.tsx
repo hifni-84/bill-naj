@@ -26,6 +26,8 @@ import { radiusDeletePlan, radiusSavePlan } from "@/lib/radius.functions";
 import { useRadiusMutation, useRadiusPlans } from "@/lib/radius-client";
 import type { RadiusPlan } from "@/lib/radius-types";
 import { formatDuration, formatIDR } from "@/lib/mikrotik-types";
+import { pushPlanToMikrotik, useHybrid } from "@/lib/hybrid";
+import { useCreds } from "@/lib/router-store";
 
 export const Route = createFileRoute("/paket")({
   head: () => ({
@@ -50,8 +52,17 @@ export const Route = createFileRoute("/paket")({
 
 function PaketPage() {
   const plans = useRadiusPlans();
+  const { hybrid } = useHybrid();
+  const { creds } = useCreds();
   const savePlan = useRadiusMutation((p: RadiusPlan) => radiusSavePlan({ data: p }));
   const delPlan = useRadiusMutation((name: string) => radiusDeletePlan({ data: { name } }));
+
+  const syncPlan = async (plan: RadiusPlan) => {
+    if (!hybrid.enabled || !hybrid.syncProfile) return;
+    const res = await pushPlanToMikrotik(creds, plan);
+    if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke MikroTik`);
+    else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
+  };
 
   const [pName, setPName] = useState("");
   const [pPrice, setPPrice] = useState("");
@@ -130,9 +141,8 @@ function PaketPage() {
             <div className="flex items-end xl:col-span-6">
               <Button
                 disabled={!pName.trim() || savePlan.isPending}
-                onClick={() =>
-                  savePlan.mutate(
-                    {
+                onClick={() => {
+                  const plan: RadiusPlan = {
                       name: pName.trim(),
                       price: Number(pPrice) || 0,
                       cost_price: Number(pCost) || 0,
@@ -149,16 +159,16 @@ function PaketPage() {
                       ),
                       shared_users: Number(pShared) || 1,
                       service: pService,
+                  };
+                  savePlan.mutate(plan, {
+                    onSuccess: () => {
+                      toast.success("Paket disimpan");
+                      setPName("");
+                      void syncPlan(plan);
                     },
-                    {
-                      onSuccess: () => {
-                        toast.success("Paket disimpan");
-                        setPName("");
-                      },
-                      onError: (e: Error) => toast.error(e.message),
-                    },
-                  )
-                }
+                    onError: (e: Error) => toast.error(e.message),
+                  });
+                }}
               >
                 <Plus className="size-4" /> Simpan Paket
               </Button>
