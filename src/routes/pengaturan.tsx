@@ -8,7 +8,9 @@ import {
   Save,
   Wifi,
   Layers,
+  MessageCircle,
   Receipt,
+  Send,
   Upload,
   Trash2,
 } from "lucide-react";
@@ -40,6 +42,13 @@ import {
 } from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
+import { waOptionsGet, waOptionsSave, waTest } from "@/lib/wa.functions";
+import {
+  defaultWaOptions,
+  defaultWaTemplate,
+  type WaOptions,
+  type WaProvider,
+} from "@/lib/invoice-types";
 import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
 import { qrisRemove, qrisUpload } from "@/lib/qris.functions";
 import {
@@ -104,6 +113,9 @@ function PengaturanPage() {
   const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
   const [gw, setGw] = useState<GatewayOptions>(defaultGatewayOptions);
   const [pub, setPub] = useState<PublicAccess>(defaultPublicAccess);
+  const [wa, setWa] = useState<WaOptions>(defaultWaOptions);
+  const [waNomor, setWaNomor] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
 
   useEffect(() => {
     setForm(readCreds());
@@ -180,6 +192,25 @@ function PengaturanPage() {
     const res = await invoiceOptionsSave({ data: { options: next } });
     if (!res.ok) toast.error("Pengaturan tagihan gagal disimpan");
     else if (pesan) toast.success(pesan);
+  };
+
+  const saveWa = async (next: WaOptions, pesan?: string) => {
+    setWa(next);
+    const res = await waOptionsSave({ data: { options: next } });
+    if (!res.ok) toast.error(res.error ?? "Pengaturan WhatsApp gagal disimpan");
+    else if (pesan) toast.success(pesan);
+  };
+
+  const testWa = async () => {
+    if (!waNomor.trim()) {
+      toast.error("Isi nomor tujuan untuk uji kirim");
+      return;
+    }
+    setWaBusy(true);
+    const res = await waTest({ data: { phone: waNomor.trim() } });
+    setWaBusy(false);
+    if (res.ok) toast.success("Pesan uji terkirim");
+    else toast.error(res.error ?? "Uji kirim gagal");
   };
 
   const saveHybrid = (next: HybridOptions) => {
