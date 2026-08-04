@@ -65,6 +65,27 @@ EOF
   chmod 600 /opt/genieacs/genieacs.env
 fi
 
+# Perbarui instalasi lama juga, tanpa mengganti JWT yang sudah ada.
+set_env() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" /opt/genieacs/genieacs.env; then
+    sed -i "s|^${key}=.*|${key}=${value}|" /opt/genieacs/genieacs.env
+  else
+    printf '%s=%s\n' "$key" "$value" >> /opt/genieacs/genieacs.env
+  fi
+}
+set_env GENIEACS_MONGODB_CONNECTION_URL mongodb://127.0.0.1/genieacs
+set_env GENIEACS_NBI_INTERFACE 0.0.0.0
+set_env GENIEACS_NBI_PORT 7557
+set_env GENIEACS_CWMP_INTERFACE 0.0.0.0
+set_env GENIEACS_CWMP_PORT 7547
+set_env GENIEACS_FS_INTERFACE 0.0.0.0
+set_env GENIEACS_FS_PORT 7567
+set_env GENIEACS_UI_INTERFACE 0.0.0.0
+set_env GENIEACS_UI_PORT 3001
+chown genieacs:genieacs /opt/genieacs/genieacs.env
+chmod 600 /opt/genieacs/genieacs.env
+
 echo "==> 5/6 Buat service systemd"
 GENIEACS_BIN=$(command -v genieacs-nbi)
 GENIEACS_BIN_DIR=$(dirname "$GENIEACS_BIN")
