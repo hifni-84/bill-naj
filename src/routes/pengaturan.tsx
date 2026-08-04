@@ -42,7 +42,14 @@ import {
 } from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
-import { waOptionsGet, waOptionsSave, waTest } from "@/lib/wa.functions";
+import {
+  waOptionsGet,
+  waOptionsSave,
+  waTest,
+  waSelfStatus,
+  waSelfQr,
+  waSelfLogout,
+} from "@/lib/wa.functions";
 import {
   defaultWaOptions,
   defaultWaTemplate,
