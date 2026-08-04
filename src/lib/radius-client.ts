@@ -117,7 +117,7 @@ export function useRadiusMaintenance(enabled: boolean, hapusExpired = true) {
     };
 
     tick();
-    const id = window.setInterval(tick, 30000);
+    const id = window.setInterval(tick, 60000);
     return () => {
       stop = true;
       window.clearInterval(id);
