@@ -2,12 +2,13 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { getSettings, saveSettings } from "./radius.server";
 
-export type BillingRole = "admin" | "reseller";
-export const billingRoles: BillingRole[] = ["admin", "reseller"];
+export type BillingRole = "admin" | "reseller" | "demo";
+export const billingRoles: BillingRole[] = ["admin", "reseller", "demo"];
 
 const defaults: Record<BillingRole, { username: string; password: string | null }> = {
   admin: { username: "admin", password: "admin" },
   reseller: { username: "reseller", password: null },
+  demo: { username: "demo", password: "demo" },
 };
 
 function keys(role: BillingRole) {
