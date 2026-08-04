@@ -127,6 +127,27 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
     return f.slice(0, 2000);
   }, [params.data, cariParam]);
 
+  const tarikSemua = useMutation({
+    mutationFn: async () => {
+      const res = await acsDiscover({ data: { creds: readAcs(), deviceId: device!.id } });
+      if (!res.ok) throw new Error((res as { error?: string }).error ?? "Gagal");
+      return res;
+    },
+    onSuccess: async () => {
+      toast.success("Permintaan seluruh parameter dikirim ke ONU");
+      await new Promise((r) => setTimeout(r, 4000));
+      void params.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const paramListUnused = useMemo(() => {
+    const q = cariParam.trim().toLowerCase();
+    const all = params.data?.params ?? [];
+    const f = q ? all.filter((p) => p.path.toLowerCase().includes(q)) : all;
+    return f.slice(0, 2000);
+  }, [params.data, cariParam]);
+
   function wanParents(d: AcsDevice) {
     const set = new Map<string, string>();
     for (const x of d.wans) set.set(x.parentPath, x.kind);
