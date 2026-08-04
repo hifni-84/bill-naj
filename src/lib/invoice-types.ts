@@ -80,3 +80,73 @@ export const statusLabel: Record<InvoiceStatus, string> = {
   paid: "Sudah dibayar",
   cancelled: "Dibatalkan",
 };
+
+/* ------------------------- Payment gateway (Midtrans / Tripay) ------------------------- */
+
+export type GatewayProvider = "none" | "midtrans" | "tripay";
+
+export type GatewayOptions = {
+  provider: GatewayProvider;
+  /** Mode uji coba (sandbox) */
+  sandbox: boolean;
+  /** URL publik panel, untuk callback & halaman kembali. Contoh: https://najwa.ddns.net */
+  baseUrl: string;
+  midtransServerKey: string;
+  tripayApiKey: string;
+  tripayPrivateKey: string;
+  tripayMerchantCode: string;
+  /** Kode channel Tripay, contoh QRIS / BRIVA / DANA */
+  tripayMethod: string;
+};
+
+export const defaultGatewayOptions: GatewayOptions = {
+  provider: "none",
+  sandbox: true,
+  baseUrl: "",
+  midtransServerKey: "",
+  tripayApiKey: "",
+  tripayPrivateKey: "",
+  tripayMerchantCode: "",
+  tripayMethod: "QRIS",
+};
+
+export const gatewayKeys = {
+  provider: "billing.pay.provider",
+  sandbox: "billing.pay.sandbox",
+  baseUrl: "billing.pay.baseUrl",
+  midtransServerKey: "billing.pay.midtrans.serverKey",
+  tripayApiKey: "billing.pay.tripay.apiKey",
+  tripayPrivateKey: "billing.pay.tripay.privateKey",
+  tripayMerchantCode: "billing.pay.tripay.merchantCode",
+  tripayMethod: "billing.pay.tripay.method",
+} as const;
+
+export function parseGatewayOptions(s: Record<string, string>): GatewayOptions {
+  const p = s[gatewayKeys.provider];
+  return {
+    provider: p === "midtrans" || p === "tripay" ? p : "none",
+    sandbox: (s[gatewayKeys.sandbox] ?? "1") === "1",
+    baseUrl: (s[gatewayKeys.baseUrl] ?? "").replace(/\/+$/, ""),
+    midtransServerKey: s[gatewayKeys.midtransServerKey] ?? "",
+    tripayApiKey: s[gatewayKeys.tripayApiKey] ?? "",
+    tripayPrivateKey: s[gatewayKeys.tripayPrivateKey] ?? "",
+    tripayMerchantCode: s[gatewayKeys.tripayMerchantCode] ?? "",
+    tripayMethod: s[gatewayKeys.tripayMethod] || "QRIS",
+  };
+}
+
+export function serializeGatewayOptions(o: GatewayOptions): Record<string, string> {
+  return {
+    [gatewayKeys.provider]: o.provider,
+    [gatewayKeys.sandbox]: o.sandbox ? "1" : "0",
+    [gatewayKeys.baseUrl]: o.baseUrl.replace(/\/+$/, ""),
+    [gatewayKeys.midtransServerKey]: o.midtransServerKey,
+    [gatewayKeys.tripayApiKey]: o.tripayApiKey,
+    [gatewayKeys.tripayPrivateKey]: o.tripayPrivateKey,
+    [gatewayKeys.tripayMerchantCode]: o.tripayMerchantCode,
+    [gatewayKeys.tripayMethod]: o.tripayMethod,
+  };
+}
+
+/** Ringkasan aman untuk browser (tanpa kunci rahasia). */
+export type GatewayPublic = { provider: GatewayProvider; sandbox: boolean; method: string };
