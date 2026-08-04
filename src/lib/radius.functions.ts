@@ -153,7 +153,7 @@ export const billingAccountLogin = createServerFn({ method: "POST" })
   .inputValidator((d: { username: string; password: string }) => d)
   .handler(async ({ data }) => {
     const { verifyBillingAccount } = await import("./billing-auth.server");
-    return { ok: await verifyBillingAccount(data.username, data.password) };
+    return verifyBillingAccount(data.username, data.password);
   });
 
 export const billingAccountSave = createServerFn({ method: "POST" })
