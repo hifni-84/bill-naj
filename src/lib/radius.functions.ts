@@ -78,10 +78,21 @@ export const radiusMaintenance = createServerFn({ method: "POST" })
   .inputValidator((d: { hapusExpired: boolean }) => d)
   .handler(async ({ data }) => {
     const { maintenance, expiredOnline, startAutoMaintenance } = await import("./radius.server");
-    startAutoMaintenance(data.hapusExpired);
-    const online = await expiredOnline();
-    const res = await maintenance(data.hapusExpired);
-    return { ...res, expiredOnline: online };
+    try {
+      startAutoMaintenance(data.hapusExpired);
+      const online = await expiredOnline();
+      const res = await maintenance(data.hapusExpired);
+      return { ...res, expiredOnline: online, error: null as string | null };
+    } catch (e) {
+      // Database RADIUS belum tersambung: jangan bikin halaman blank.
+      return {
+        stamped: 0,
+        expired: 0,
+        purged: 0,
+        expiredOnline: [] as string[],
+        error: e instanceof Error ? e.message : "Database RADIUS tidak tersambung",
+      };
+    }
   });
 
 export const radiusNasList = createServerFn({ method: "GET" }).handler(async () => {
