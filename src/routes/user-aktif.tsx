@@ -66,11 +66,16 @@ function ActivePage() {
     <>
       <PageHeader
         title="User Aktif"
-        description="Diperbarui otomatis setiap 10 detik."
+        description={`Total user aktif: ${active.data?.length ?? 0} — diperbarui otomatis setiap 10 detik.`}
         action={
-          <Button variant="outline" onClick={() => active.refetch()}>
-            <RefreshCw className="size-4" /> Muat Ulang
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm">
+              Total Aktif: <strong className="mono-num">{active.data?.length ?? 0}</strong>
+            </span>
+            <Button variant="outline" onClick={() => active.refetch()}>
+              <RefreshCw className="size-4" /> Muat Ulang
+            </Button>
+          </div>
         }
       />
 
