@@ -171,7 +171,7 @@ export function mikrotikScript(p: {
   secret: string;
 }) {
   return `/interface wireguard
-add name=wg-billing listen-port=13231 private-key="${p.privateKey}"
+add name=wg-billing listen-port=13231 mtu=1420 private-key="${p.privateKey}"
 
 /ip address
 add address=${p.peerIp}/24 interface=wg-billing
@@ -181,14 +181,70 @@ add interface=wg-billing public-key="${p.serverPublicKey}" \\
     endpoint-address=${p.endpoint} endpoint-port=${p.listenPort} \\
     allowed-address=${p.network} persistent-keepalive=25s
 
+# REST API (dipakai billing untuk hapus user / putus sesi) + API lama
+/ip service set www disabled=no
 /ip service set api disabled=no
+
 /ip firewall filter
 add chain=input in-interface=wg-billing action=accept comment="WG Billing" place-before=0
 
 /radius
 add address=${p.serverIp} secret=${p.secret} service=hotspot,ppp timeout=3s
 /ip hotspot profile set [find] use-radius=yes
-/ppp aaa set use-radius=yes`;
+/ppp aaa set use-radius=yes
+
+# Cek dari router: harus reply
+/ping ${p.serverIp} count=3`;
+}
+
+/** Diagnosa satu peer: handshake tunnel + REST API router. */
+export async function wgTestPeer(
+  id: number,
+  creds?: { username?: string; password?: string; port?: number; useHttps?: boolean },
+) {
+  const peers = await wgListPeers();
+  const p = peers.find((x) => x.id === id);
+  if (!p) throw new Error("Router tidak ditemukan");
+
+  const hs = await wgHandshakes();
+  const last = hs[p.public_key]?.last ?? 0;
+  const inConf = (await readConf().catch(() => "")).includes(p.public_key);
+
+  const { callRouterOs } = await import("./mikrotik.server");
+  const res = creds?.username
+    ? await callRouterOs(
+        {
+          host: p.peer_ip,
+          username: creds.username,
+          password: creds.password ?? "",
+          ...(creds.port !== undefined ? { port: creds.port } : {}),
+          ...(creds.useHttps !== undefined ? { useHttps: creds.useHttps } : {}),
+        },
+        "/system/identity",
+        "GET",
+      )
+    : null;
+
+  const saran: string[] = [];
+  if (!inConf) saran.push(`Public key peer tidak ada di ${CONF} — hapus lalu tambah ulang router.`);
+  if (!last)
+    saran.push(
+      "Belum ada handshake: pastikan skrip sudah dijalankan di router, endpoint & port UDP server terbuka, dan private-key di router sama dengan yang ditampilkan panel.",
+    );
+  if (last && res && !res.ok)
+    saran.push(
+      "Tunnel sudah handshake tapi REST API gagal: aktifkan /ip service set www disabled=no dan izinkan chain=input in-interface=wg-billing, serta pastikan user/password router sama dengan Pengaturan.",
+    );
+
+  return {
+    name: p.name,
+    peerIp: p.peer_ip,
+    inConf,
+    lastHandshake: last,
+    api: Boolean(res?.ok),
+    apiError: res && !res.ok ? (res.error ?? "gagal") : creds?.username ? null : "Kredensial router belum diisi di Pengaturan",
+    saran,
+  };
 }
 
 export async function wgAddPeer(input: { name: string; secret?: string; registerNas?: boolean }) {
