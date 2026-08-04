@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   radiusMaintenance,
   radiusNasList,
+  radiusNasStatus,
   radiusPing,
   radiusPlans,
   radiusReport,
@@ -97,4 +98,25 @@ export function useRadiusMaintenance(enabled: boolean, hapusExpired = true) {
 
 export function useRadiusNas() {
   return useQuery({ queryKey: ["radius", "nas"], queryFn: () => radiusNasList() });
+}
+
+/** Status terhubung/tidak: RADIUS (radacct) + REST API router. */
+export function useRadiusNasStatus() {
+  return useQuery({
+    queryKey: ["radius", "nas-status"],
+    queryFn: () => {
+      const c = readCreds();
+      return radiusNasStatus({
+        data: {
+          creds: {
+            username: c.username,
+            password: c.password,
+            ...(c.port !== undefined ? { port: c.port } : {}),
+            ...(c.useHttps !== undefined ? { useHttps: c.useHttps } : {}),
+          },
+        },
+      });
+    },
+    refetchInterval: 20000,
+  });
 }
