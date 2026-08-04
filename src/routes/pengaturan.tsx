@@ -261,6 +261,66 @@ function PengaturanPage() {
           </div>
         </div>
 
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <Layers className="size-4 text-primary" /> Billing Hybrid (RADIUS + MikroTik)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Jika diaktifkan, setiap paket dan voucher yang dibuat atau digenerate tersimpan di
+                database RADIUS sekaligus langsung dibuat di router MikroTik (hotspot user profile /
+                ppp profile dan hotspot user / ppp secret).
+              </p>
+            </div>
+            <Switch
+              checked={hybrid.enabled}
+              onCheckedChange={(v) => {
+                saveHybrid({ ...hybrid, enabled: v });
+                toast.success(v ? "Mode hybrid aktif" : "Mode hybrid nonaktif (hanya RADIUS)");
+              }}
+              aria-label="Aktifkan mode billing hybrid"
+            />
+          </div>
+
+          {hybrid.enabled && (
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Sinkronkan Paket → Profile</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paket dibuat sebagai profile di router beserta bandwidth, shared users, dan masa
+                    aktif.
+                  </p>
+                </div>
+                <Switch
+                  checked={hybrid.syncProfile}
+                  onCheckedChange={(v) => saveHybrid({ ...hybrid, syncProfile: v })}
+                  aria-label="Sinkronkan paket ke profile MikroTik"
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Sinkronkan Voucher → Router</p>
+                  <p className="text-xs text-muted-foreground">
+                    Voucher hasil generate dan user manual langsung dibuat di hotspot user / ppp
+                    secret.
+                  </p>
+                </div>
+                <Switch
+                  checked={hybrid.syncVoucher}
+                  onCheckedChange={(v) => saveHybrid({ ...hybrid, syncVoucher: v })}
+                  aria-label="Sinkronkan voucher ke MikroTik"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Pastikan koneksi router di panel sebelah sudah tersimpan dan lolos tes koneksi,
+                karena mode hybrid memakai kredensial tersebut.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="lg:col-span-2">
           <NasManager />
         </div>
