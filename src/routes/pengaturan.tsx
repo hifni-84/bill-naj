@@ -187,6 +187,52 @@ function PengaturanPage() {
     writeHybrid(next);
   };
 
+  const [qrisBusy, setQrisBusy] = useState(false);
+
+  const uploadQris = async (file: File) => {
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Ukuran gambar maksimal 3 MB");
+      return;
+    }
+    setQrisBusy(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result).split(",")[1] ?? "");
+        fr.onerror = () => reject(new Error("Gagal membaca file"));
+        fr.readAsDataURL(file);
+      });
+      const res = await qrisUpload({ data: { mime: file.type, base64 } });
+      if (!res.ok) {
+        toast.error(res.error || "Gagal mengunggah QRIS");
+        return;
+      }
+      setInv((p) => ({ ...p, qrisUrl: res.url }));
+      toast.success("Gambar QRIS berhasil diunggah");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setQrisBusy(false);
+    }
+  };
+
+  const removeQris = async () => {
+    setQrisBusy(true);
+    const res = await qrisRemove({});
+    setQrisBusy(false);
+    if (!res.ok) {
+      toast.error(res.error || "Gagal menghapus QRIS");
+      return;
+    }
+    setInv((p) => ({ ...p, qrisUrl: "" }));
+    toast.success("Gambar QRIS dihapus");
+  };
+
+  const saveHybridUnused = (next: HybridOptions) => {
+    setHybrid(next);
+    writeHybrid(next);
+  };
+
   const saveGateway = async (next: GatewayOptions, pesan?: string) => {
     setGw(next);
     const res = await gatewayOptionsSave({ data: { options: next } });
