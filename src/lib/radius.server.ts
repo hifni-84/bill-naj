@@ -483,6 +483,14 @@ export async function maintenance(hapusExpired = true) {
     if (lama.length) await deleteUsers(lama.map((l) => l.username));
     result.purged = lama.length;
   }
+
+  // 5) Tagihan otomatis H-1 untuk paket masa aktif 30 hari (bila diaktifkan)
+  try {
+    const { generateInvoices } = await import("./invoice.server");
+    await generateInvoices();
+  } catch {
+    /* tagihan otomatis nonaktif / tabel belum siap */
+  }
   return result;
 }
 
