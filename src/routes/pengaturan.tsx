@@ -60,10 +60,15 @@ export const Route = createFileRoute("/pengaturan")({
 
 type AccountForm = { username: string; password: string; confirm: string; configured: boolean };
 
-const roleLabels: Record<BillingRole, string> = { admin: "Admin", reseller: "Reseller" };
+const roleLabels: Record<BillingRole, string> = {
+  admin: "Admin",
+  reseller: "Reseller",
+  demo: "Demo (hanya lihat)",
+};
 const initialAccounts: Record<BillingRole, AccountForm> = {
   admin: { username: "admin", password: "", confirm: "", configured: false },
   reseller: { username: "reseller", password: "", confirm: "", configured: false },
+  demo: { username: "demo", password: "", confirm: "", configured: false },
 };
 
 function PengaturanPage() {
@@ -256,7 +261,7 @@ function PengaturanPage() {
         <div className="panel p-6">
           <h2 className="mb-4 text-sm font-semibold">Akun Login Billing</h2>
           <div className="grid gap-6">
-            {(["admin", "reseller"] as BillingRole[]).map((role) => {
+            {(["admin", "reseller", "demo"] as BillingRole[]).map((role) => {
               const acc = accounts[role];
               return (
                 <div key={role} className="border-t border-border pt-5 first:border-0 first:pt-0">
@@ -267,7 +272,9 @@ function PengaturanPage() {
                         ? "Password tersimpan"
                         : role === "admin"
                           ? "Default: admin / admin"
-                          : "Belum diatur"}
+                          : role === "demo"
+                            ? "Default: demo / demo"
+                            : "Belum diatur"}
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
