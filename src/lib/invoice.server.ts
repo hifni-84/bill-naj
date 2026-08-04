@@ -64,6 +64,16 @@ const SELECT = `SELECT id, username, plan, service, amount, status, note,
         ${utc("paid_at")} AS paid_at
    FROM billing_invoice`;
 
+/** Sama seperti SELECT, plus nomor WhatsApp pelanggan. */
+const SELECT_WA = `SELECT i.id, i.username, i.plan, i.service, i.amount, i.status, i.note,
+        ${utc("i.due_date")} AS due_date,
+        ${utc("i.period_end")} AS period_end,
+        ${utc("i.created_at")} AS created_at,
+        ${utc("i.paid_at")} AS paid_at,
+        COALESCE(v.phone, '') AS phone
+   FROM billing_invoice i
+   LEFT JOIN billing_voucher v ON v.username = i.username`;
+
 export async function invoiceOptions() {
   return parseInvoiceOptions(await getSettings());
 }
@@ -116,17 +126,38 @@ export async function generateInvoices(): Promise<{ created: number; skipped: bo
     );
     created += 1;
   }
-  return { created, skipped: false };
+
+  // Penagihan otomatis lewat WhatsApp untuk tagihan yang baru dibuat.
+  let waSent = 0;
+  if (created > 0) {
+    try {
+      const { waOptions, blastUnpaid } = await import("./wa.server");
+      const wa = await waOptions();
+      if (wa.enabled && wa.autoSend) waSent = (await blastUnpaid()).sent;
+    } catch {
+      /* gateway WA belum siap */
+    }
+  }
+  return { created, skipped: false, waSent };
 }
 
 export async function listInvoices(status?: "unpaid" | "paid" | "cancelled") {
   await ensureTable();
-  if (status) {
-    return query<Invoice>(`${SELECT} WHERE status = ? ORDER BY due_date ASC, id DESC LIMIT 500`, [
-      status,
-    ]);
+  try {
+    const { ensurePhoneColumn } = await import("./wa.server");
+    await ensurePhoneColumn();
+  } catch {
+    /* abaikan */
   }
-  return query<Invoice>(`${SELECT} ORDER BY status = 'unpaid' DESC, due_date ASC LIMIT 500`);
+  if (status) {
+    return query<Invoice>(
+      `${SELECT_WA} WHERE i.status = ? ORDER BY i.due_date ASC, i.id DESC LIMIT 500`,
+      [status],
+    );
+  }
+  return query<Invoice>(
+    `${SELECT_WA} ORDER BY i.status = 'unpaid' DESC, i.due_date ASC LIMIT 500`,
+  );
 }
 
 /** Tagihan milik satu pelanggan (dipakai portal publik, tanpa data sensitif). */
