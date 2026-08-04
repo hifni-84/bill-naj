@@ -328,7 +328,7 @@ function Tr069Page() {
         <Tr069DeviceDialog
           key={`${detailDevice.id}-${detail?.tab}`}
           device={detailDevice}
-          defaultTab={detail?.tab}
+          defaultTab={detail?.tab ?? "info"}
           onClose={() => setDetail(null)}
           onChanged={() => void devices.refetch()}
         />
