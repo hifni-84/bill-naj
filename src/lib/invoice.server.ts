@@ -133,23 +133,46 @@ export async function listInvoices(status?: "unpaid" | "paid" | "cancelled") {
 export async function invoicesFor(username: string) {
   await ensureTable();
   const u = username.trim();
-  if (!u) return { found: false as const, invoices: [] as Invoice[], expires_at: null, plan: "" };
+  const kosong = {
+    found: false as const,
+    invoices: [] as Invoice[],
+    expires_at: null,
+    plan: "",
+    usage: { download: 0, upload: 0, total: 0, sessionTime: 0 },
+  };
+  if (!u) return kosong;
   const user = await query<{ plan: string; expires_at: string | null }>(
     `SELECT plan, ${utc("expires_at")} AS expires_at FROM billing_voucher WHERE username = ? LIMIT 1`,
     [u],
   );
   if (!user[0]) {
-    return { found: false as const, invoices: [] as Invoice[], expires_at: null, plan: "" };
+    return kosong;
   }
   const invoices = await query<Invoice>(
     `${SELECT} WHERE username = ? ORDER BY due_date DESC LIMIT 24`,
     [u],
   );
+  let usage = { download: 0, upload: 0, total: 0, sessionTime: 0 };
+  try {
+    const rows = await query<{ dl: number; ul: number; st: number }>(
+      `SELECT COALESCE(SUM(acctoutputoctets),0) AS dl,
+              COALESCE(SUM(acctinputoctets),0) AS ul,
+              COALESCE(SUM(acctsessiontime),0) AS st
+         FROM radacct WHERE username = ?`,
+      [u],
+    );
+    const dl = Number(rows[0]?.dl ?? 0);
+    const ul = Number(rows[0]?.ul ?? 0);
+    usage = { download: dl, upload: ul, total: dl + ul, sessionTime: Number(rows[0]?.st ?? 0) };
+  } catch {
+    /* tabel radacct belum ada */
+  }
   return {
     found: true as const,
     invoices,
     expires_at: user[0].expires_at,
     plan: user[0].plan,
+    usage,
   };
 }
 
