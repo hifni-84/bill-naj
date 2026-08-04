@@ -82,10 +82,14 @@ export async function invoiceOptions() {
  * Buat tagihan untuk semua user paket 30 hari yang akan expired dalam
  * `leadDays` hari (default H-1). Aman dipanggil berulang (UNIQUE per periode).
  */
-export async function generateInvoices(): Promise<{ created: number; skipped: boolean }> {
+export async function generateInvoices(): Promise<{
+  created: number;
+  skipped: boolean;
+  waSent: number;
+}> {
   await ensureTable();
   const opt = await invoiceOptions();
-  if (!opt.enabled) return { created: 0, skipped: true };
+  if (!opt.enabled) return { created: 0, skipped: true, waSent: 0 };
 
   const jatuh = await query<{
     username: string;
