@@ -42,7 +42,14 @@ import {
 } from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
-import { waOptionsGet, waOptionsSave, waTest } from "@/lib/wa.functions";
+import {
+  waOptionsGet,
+  waOptionsSave,
+  waTest,
+  waSelfStatus,
+  waSelfQr,
+  waSelfLogout,
+} from "@/lib/wa.functions";
 import {
   defaultWaOptions,
   defaultWaTemplate,
@@ -116,6 +123,10 @@ function PengaturanPage() {
   const [wa, setWa] = useState<WaOptions>(defaultWaOptions);
   const [waNomor, setWaNomor] = useState("");
   const [waBusy, setWaBusy] = useState(false);
+  const [waQr, setWaQr] = useState("");
+  const [waSelfState, setWaSelfState] = useState<string>("offline");
+  const [waSelfUser, setWaSelfUser] = useState("");
+  const [waQrBusy, setWaQrBusy] = useState(false);
 
   useEffect(() => {
     setForm(readCreds());
@@ -218,6 +229,50 @@ function PengaturanPage() {
     if (res.ok) toast.success("Pesan uji terkirim");
     else toast.error(res.error ?? "Uji kirim gagal");
   };
+
+  // ----- Self-hosted (QR scan) helpers -----
+  const refreshSelf = async () => {
+    const r = await waSelfStatus();
+    if (r.ok) {
+      setWaSelfState(r.status.state);
+      setWaSelfUser(r.status.user);
+    } else {
+      setWaSelfState("offline");
+    }
+  };
+
+  const showQr = async () => {
+    setWaQrBusy(true);
+    const r = await waSelfQr();
+    setWaQrBusy(false);
+    if (r.ok && r.qr) {
+      setWaQr(r.qr);
+      void refreshSelf();
+    } else {
+      toast.error(r.error ?? "QR belum tersedia. Pastikan layanan wa-gateway berjalan.");
+    }
+  };
+
+  const logoutSelf = async () => {
+    setWaQrBusy(true);
+    const r = await waSelfLogout();
+    setWaQrBusy(false);
+    if (r.ok) {
+      toast.success("Sesi dihapus. QR baru akan tersedia sebentar.");
+      setWaQr("");
+      void refreshSelf();
+    } else {
+      toast.error(r.error ?? "Logout gagal");
+    }
+  };
+
+  // Poll status koneksi saat provider = self
+  useEffect(() => {
+    if (wa.provider !== "self") return;
+    void refreshSelf();
+    const t = setInterval(refreshSelf, 5000);
+    return () => clearInterval(t);
+  }, [wa.provider]);
 
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
@@ -765,54 +820,135 @@ function PengaturanPage() {
                 >
                   <option value="fonnte">Fonnte</option>
                   <option value="wablas">Wablas</option>
+                  <option value="self">Self-hosted (QR Scan)</option>
                   <option value="custom">Custom / WhatsApp API sendiri</option>
                 </select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wa-token">
-                  {wa.provider === "custom" ? "Token / Authorization (opsional)" : "Token API"}
-                </Label>
-                <Input
-                  id="wa-token"
-                  value={wa.token}
-                  onChange={(e) => setWa({ ...wa, token: e.target.value })}
-                  placeholder="Token dari dashboard gateway"
-                />
-              </div>
-              {wa.provider === "wablas" && (
-                <div className="grid gap-2">
-                  <Label htmlFor="wa-secret">Secret Key (Wablas)</Label>
-                  <Input
-                    id="wa-secret"
-                    value={wa.secret}
-                    onChange={(e) => setWa({ ...wa, secret: e.target.value })}
-                  />
+
+              {wa.provider === "self" ? (
+                <div className="grid gap-3 sm:col-span-2">
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 p-3">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Status koneksi:
+                    </span>
+                    <span
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                        (waSelfState === "open"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : waSelfState === "qr"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                            : "bg-muted text-muted-foreground")
+                      }
+                    >
+                      {waSelfState === "open"
+                        ? `Terhubung${waSelfUser ? ` — ${waSelfUser}` : ""}`
+                        : waSelfState === "qr"
+                          ? "Menunggu pindai QR"
+                          : waSelfState === "connecting"
+                            ? "Menghubungkan…"
+                            : waSelfState === "close"
+                              ? "Terputus"
+                              : "Layanan mati / tidak terjangkau"}
+                    </span>
+                    <div className="ml-auto flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={waQrBusy}
+                        onClick={() => void showQr()}
+                      >
+                        <MessageCircle className="size-4" />
+                        {waQrBusy ? "Memuat…" : "Tampilkan QR"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={waQrBusy}
+                        onClick={() => void logoutSelf()}
+                      >
+                        <Trash2 className="size-4" /> Logout / Pindai Ulang
+                      </Button>
+                    </div>
+                  </div>
+
+                  {waQr && (
+                    <div className="flex flex-col items-center gap-2 rounded-md border border-border p-4">
+                      <img
+                        src={waQr}
+                        alt="QR WhatsApp"
+                        className="h-64 w-64 rounded bg-white p-2"
+                      />
+                      <p className="text-center text-xs text-muted-foreground">
+                        Buka WhatsApp di HP → <b>Pengaturan → Perangkat tertaut → Tautkan
+                        perangkat</b> → pindai QR di atas.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="grid gap-2 sm:col-span-2">
+                    <Label htmlFor="wa-url-self">URL API Gateway (self-hosted)</Label>
+                    <Input
+                      id="wa-url-self"
+                      value={wa.apiUrl}
+                      onChange={(e) => setWa({ ...wa, apiUrl: e.target.value })}
+                      placeholder="http://127.0.0.1:3100"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Jalankan layanan di server: <span className="mono-num">cd deploy/wa-gateway && npm install && npm start</span>{" "}
+                      (atau PM2). Lihat <span className="mono-num">deploy/wa-gateway/README.md</span>.
+                    </p>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="wa-token">
+                      {wa.provider === "custom" ? "Token / Authorization (opsional)" : "Token API"}
+                    </Label>
+                    <Input
+                      id="wa-token"
+                      value={wa.token}
+                      onChange={(e) => setWa({ ...wa, token: e.target.value })}
+                      placeholder="Token dari dashboard gateway"
+                    />
+                  </div>
+                  {wa.provider === "wablas" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="wa-secret">Secret Key (Wablas)</Label>
+                      <Input
+                        id="wa-secret"
+                        value={wa.secret}
+                        onChange={(e) => setWa({ ...wa, secret: e.target.value })}
+                      />
+                    </div>
+                  )}
+                  {wa.provider !== "fonnte" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="wa-url">
+                        {wa.provider === "wablas"
+                          ? "Domain Wablas (mis. https://sg.wablas.com)"
+                          : "URL API (POST JSON)"}
+                      </Label>
+                      <Input
+                        id="wa-url"
+                        value={wa.apiUrl}
+                        onChange={(e) => setWa({ ...wa, apiUrl: e.target.value })}
+                        placeholder="https://domain-gateway/send-message"
+                      />
+                    </div>
+                  )}
+                  <div className="grid gap-2">
+                    <Label htmlFor="wa-sender">Nomor Pengirim / Device (opsional)</Label>
+                    <Input
+                      id="wa-sender"
+                      value={wa.sender}
+                      onChange={(e) => setWa({ ...wa, sender: e.target.value })}
+                      placeholder="6281234567890"
+                    />
+                  </div>
+                </>
               )}
-              {wa.provider !== "fonnte" && (
-                <div className="grid gap-2">
-                  <Label htmlFor="wa-url">
-                    {wa.provider === "wablas"
-                      ? "Domain Wablas (mis. https://sg.wablas.com)"
-                      : "URL API (POST JSON)"}
-                  </Label>
-                  <Input
-                    id="wa-url"
-                    value={wa.apiUrl}
-                    onChange={(e) => setWa({ ...wa, apiUrl: e.target.value })}
-                    placeholder="https://domain-gateway/send-message"
-                  />
-                </div>
-              )}
-              <div className="grid gap-2">
-                <Label htmlFor="wa-sender">Nomor Pengirim / Device (opsional)</Label>
-                <Input
-                  id="wa-sender"
-                  value={wa.sender}
-                  onChange={(e) => setWa({ ...wa, sender: e.target.value })}
-                  placeholder="6281234567890"
-                />
-              </div>
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="wa-tpl">Isi Pesan Tagihan</Label>
                 <Textarea

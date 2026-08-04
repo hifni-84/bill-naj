@@ -1,0 +1,17 @@
+{
+  "name": "wa-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted WhatsApp API (QR scan) untuk billing MikroTik. Dijalankan terpisah di server Ubuntu.",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  }
+}

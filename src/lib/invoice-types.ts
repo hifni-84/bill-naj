@@ -155,7 +155,7 @@ export type GatewayPublic = { provider: GatewayProvider; sandbox: boolean; metho
 
 /* ------------------------- WhatsApp Gateway (penagihan otomatis) ------------------------- */
 
-export type WaProvider = "fonnte" | "wablas" | "custom";
+export type WaProvider = "fonnte" | "wablas" | "custom" | "self";
 
 export type WaOptions = {
   /** Kirim tagihan otomatis lewat WhatsApp */
@@ -202,12 +202,15 @@ export const waKeys = {
 
 export function parseWaOptions(s: Record<string, string>): WaOptions {
   const p = s[waKeys.provider];
+  const provider: WaProvider = p === "wablas" || p === "custom" || p === "self" ? p : "fonnte";
+  const apiUrl = (s[waKeys.apiUrl] ?? "").trim();
   return {
     enabled: s[waKeys.enabled] === "1",
-    provider: p === "wablas" || p === "custom" ? p : "fonnte",
+    provider,
     token: s[waKeys.token] ?? "",
     secret: s[waKeys.secret] ?? "",
-    apiUrl: (s[waKeys.apiUrl] ?? "").trim(),
+    // URL default untuk provider self-hosted (QR scan) jika belum diisi.
+    apiUrl: provider === "self" && !apiUrl ? "http://127.0.0.1:3100" : apiUrl,
     sender: s[waKeys.sender] ?? "",
     template: s[waKeys.template] || defaultWaTemplate,
     autoSend: (s[waKeys.autoSend] ?? "1") === "1",
