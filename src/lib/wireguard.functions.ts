@@ -75,3 +75,19 @@ export const wgRemove = createServerFn({ method: "POST" })
       return { ok: false as const, error: (e as Error).message };
     }
   });
+
+export const wgTest = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      id: number;
+      creds?: { username?: string; password?: string; port?: number; useHttps?: boolean };
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { wgTestPeer } = await import("./wireguard.server");
+      return { ok: true as const, ...(await wgTestPeer(data.id, data.creds)) };
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
