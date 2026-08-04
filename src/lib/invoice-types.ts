@@ -16,6 +16,8 @@ export type Invoice = {
   created_at: string;
   paid_at: string | null;
   note: string;
+  /** Nomor WhatsApp pelanggan (dari data voucher/user) */
+  phone?: string;
 };
 
 export type InvoiceOptions = {
@@ -150,3 +152,86 @@ export function serializeGatewayOptions(o: GatewayOptions): Record<string, strin
 
 /** Ringkasan aman untuk browser (tanpa kunci rahasia). */
 export type GatewayPublic = { provider: GatewayProvider; sandbox: boolean; method: string };
+
+/* ------------------------- WhatsApp Gateway (penagihan otomatis) ------------------------- */
+
+export type WaProvider = "fonnte" | "wablas" | "custom";
+
+export type WaOptions = {
+  /** Kirim tagihan otomatis lewat WhatsApp */
+  enabled: boolean;
+  provider: WaProvider;
+  /** Token / API key gateway */
+  token: string;
+  /** Wablas: secret key. Custom: header Authorization tambahan (opsional) */
+  secret: string;
+  /** Endpoint API (wajib untuk provider custom, contoh: https://domain/send-message) */
+  apiUrl: string;
+  /** Nomor pengirim (opsional, dipakai bila gateway punya beberapa device) */
+  sender: string;
+  /** Isi pesan; mendukung {nama} {paket} {nominal} {jatuh_tempo} {link} {merchant} */
+  template: string;
+  /** Kirim otomatis setiap tagihan baru dibuat */
+  autoSend: boolean;
+};
+
+export const defaultWaTemplate =
+  "Halo {nama},\n\nTagihan internet {merchant} paket *{paket}* sebesar *{nominal}* jatuh tempo {jatuh_tempo}.\n\nBayar sekarang di portal pembayaran:\n{link}\n\nTerima kasih 🙏";
+
+export const defaultWaOptions: WaOptions = {
+  enabled: false,
+  provider: "fonnte",
+  token: "",
+  secret: "",
+  apiUrl: "",
+  sender: "",
+  template: defaultWaTemplate,
+  autoSend: true,
+};
+
+export const waKeys = {
+  enabled: "billing.wa.enabled",
+  provider: "billing.wa.provider",
+  token: "billing.wa.token",
+  secret: "billing.wa.secret",
+  apiUrl: "billing.wa.apiUrl",
+  sender: "billing.wa.sender",
+  template: "billing.wa.template",
+  autoSend: "billing.wa.autoSend",
+} as const;
+
+export function parseWaOptions(s: Record<string, string>): WaOptions {
+  const p = s[waKeys.provider];
+  return {
+    enabled: s[waKeys.enabled] === "1",
+    provider: p === "wablas" || p === "custom" ? p : "fonnte",
+    token: s[waKeys.token] ?? "",
+    secret: s[waKeys.secret] ?? "",
+    apiUrl: (s[waKeys.apiUrl] ?? "").trim(),
+    sender: s[waKeys.sender] ?? "",
+    template: s[waKeys.template] || defaultWaTemplate,
+    autoSend: (s[waKeys.autoSend] ?? "1") === "1",
+  };
+}
+
+export function serializeWaOptions(o: WaOptions): Record<string, string> {
+  return {
+    [waKeys.enabled]: o.enabled ? "1" : "0",
+    [waKeys.provider]: o.provider,
+    [waKeys.token]: o.token,
+    [waKeys.secret]: o.secret,
+    [waKeys.apiUrl]: o.apiUrl.trim(),
+    [waKeys.sender]: o.sender,
+    [waKeys.template]: o.template,
+    [waKeys.autoSend]: o.autoSend ? "1" : "0",
+  };
+}
+
+/** Normalisasi nomor ke format internasional Indonesia (62xxxx). */
+export function normalizeWaNumber(raw: string) {
+  let n = (raw ?? "").replace(/\D/g, "");
+  if (!n) return "";
+  if (n.startsWith("0")) n = `62${n.slice(1)}`;
+  else if (n.startsWith("8")) n = `62${n}`;
+  return n;
+}

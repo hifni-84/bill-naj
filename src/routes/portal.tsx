@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, CreditCard, Gauge, QrCode, Search, Wifi } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CreditCard,
+  Gauge,
+  QrCode,
+  Search,
+  Wifi,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +31,8 @@ export const Route = createFileRoute("/portal")({
       { property: "og:title", content: "Portal Pelanggan — Cek Tagihan Internet" },
       {
         property: "og:description",
-        content: "Masukkan username untuk melihat masa aktif dan tagihan perpanjangan paket 30 hari.",
+        content:
+          "Masukkan username untuk melihat masa aktif dan tagihan perpanjangan paket 30 hari.",
       },
     ],
   }),
@@ -45,6 +54,18 @@ function PortalPage() {
   const cek = useMutation({
     mutationFn: (u: string) => invoiceLookup({ data: { username: u } }),
   });
+
+  // Link dari pesan WhatsApp: /portal?u=username -> langsung tampilkan tagihan.
+  const auto = useRef(false);
+  useEffect(() => {
+    if (auto.current) return;
+    const u = new URLSearchParams(window.location.search).get("u")?.trim();
+    if (u) {
+      auto.current = true;
+      setUsername(u);
+      cek.mutate(u);
+    }
+  }, [cek]);
 
   const gw = useQuery({ queryKey: ["gateway-public"], queryFn: () => gatewayPublicGet() });
   const online = (gw.data?.provider ?? "none") !== "none";

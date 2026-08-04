@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { BadgeCheck, Ban, ExternalLink, RefreshCw, Trash2, Zap } from "lucide-react";
+import {
+  BadgeCheck,
+  Ban,
+  ExternalLink,
+  MessageCircle,
+  RefreshCw,
+  Send,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
@@ -23,6 +32,7 @@ import {
   invoiceList,
   invoicePay,
 } from "@/lib/invoice.functions";
+import { waPhoneSave, waSendInvoice, waSendUnpaid } from "@/lib/wa.functions";
 
 export const Route = createFileRoute("/tagihan")({
   head: () => ({
@@ -36,7 +46,8 @@ export const Route = createFileRoute("/tagihan")({
       { property: "og:title", content: "Tagihan Otomatis — NAJWA_BILLING" },
       {
         property: "og:description",
-        content: "Kelola tagihan perpanjangan paket 30 hari hotspot & PPPoE beserta konfirmasi pembayaran.",
+        content:
+          "Kelola tagihan perpanjangan paket 30 hari hotspot & PPPoE beserta konfirmasi pembayaran.",
       },
     ],
   }),
@@ -55,6 +66,7 @@ const tanggal = (v: string | null) =>
 function TagihanPage() {
   const qc = useQueryClient();
   const [cari, setCari] = useState("");
+  const [hp, setHp] = useState<Record<string, string>>({});
 
   const list = useQuery({
     queryKey: ["invoices"],
@@ -69,7 +81,39 @@ function TagihanPage() {
     onSuccess: (r) => {
       if (r.error) toast.error(r.error);
       else if (r.skipped) toast.error("Tagihan otomatis belum diaktifkan di Pengaturan");
-      else toast.success(`${r.created} tagihan baru dibuat`);
+      else
+        toast.success(
+          `${r.created} tagihan baru dibuat${r.waSent ? `, ${r.waSent} pesan WA terkirim` : ""}`,
+        );
+      refresh();
+    },
+  });
+
+  const kirimWa = useMutation({
+    mutationFn: (v: { id: number; phone?: string }) => waSendInvoice({ data: v }),
+    onSuccess: (r) => {
+      if (r.ok) toast.success(`Tagihan dikirim ke WhatsApp ${r.phone}`);
+      else toast.error(r.error ?? "Gagal mengirim WhatsApp");
+    },
+  });
+
+  const kirimSemua = useMutation({
+    mutationFn: () => waSendUnpaid(),
+    onSuccess: (r) => {
+      if (r.error) toast.error(r.error);
+      else if (r.skipped) toast.error("WhatsApp gateway belum diaktifkan di Pengaturan");
+      else
+        toast.success(
+          `${r.sent} pesan terkirim${r.failed ? `, ${r.failed} gagal: ${r.errors.join("; ")}` : ""}`,
+        );
+    },
+  });
+
+  const simpanHp = useMutation({
+    mutationFn: (v: { username: string; phone: string }) => waPhoneSave({ data: v }),
+    onSuccess: (r) => {
+      if (r.ok) toast.success("Nomor WhatsApp disimpan");
+      else toast.error(r.error ?? "Gagal menyimpan nomor");
       refresh();
     },
   });
@@ -125,6 +169,14 @@ function TagihanPage() {
             <Button variant="outline" onClick={() => buat.mutate()} disabled={buat.isPending}>
               <Zap className="size-4" /> {buat.isPending ? "Memproses..." : "Buat Sekarang"}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => kirimSemua.mutate()}
+              disabled={kirimSemua.isPending}
+            >
+              <MessageCircle className="size-4" />
+              {kirimSemua.isPending ? "Mengirim..." : "Kirim WA Semua"}
+            </Button>
             <Button variant="outline" onClick={refresh}>
               <RefreshCw className="size-4" /> Muat Ulang
             </Button>
@@ -139,9 +191,7 @@ function TagihanPage() {
         </div>
         <div className="panel p-5">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Nilai Tertagih</p>
-          <p className="mono-num mt-2 text-2xl font-semibold text-primary">
-            {rupiah(totalUnpaid)}
-          </p>
+          <p className="mono-num mt-2 text-2xl font-semibold text-primary">{rupiah(totalUnpaid)}</p>
         </div>
         <div className="panel p-5">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Total Tagihan</p>
@@ -166,6 +216,7 @@ function TagihanPage() {
                 <TableHead>Username</TableHead>
                 <TableHead>Paket</TableHead>
                 <TableHead>Layanan</TableHead>
+                <TableHead>No. WhatsApp</TableHead>
                 <TableHead className="text-right">Nominal</TableHead>
                 <TableHead>Jatuh Tempo</TableHead>
                 <TableHead>Status</TableHead>
@@ -180,6 +231,20 @@ function TagihanPage() {
                   <TableCell className="uppercase text-xs text-muted-foreground">
                     {i.service}
                   </TableCell>
+                  <TableCell>
+                    <Input
+                      className="mono-num h-8 w-36 text-xs"
+                      placeholder="6281..."
+                      value={hp[i.username] ?? i.phone ?? ""}
+                      onChange={(e) => setHp({ ...hp, [i.username]: e.target.value })}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim();
+                        if (v !== (i.phone ?? "")) {
+                          simpanHp.mutate({ username: i.username, phone: v });
+                        }
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="mono-num text-right">{rupiah(i.amount)}</TableCell>
                   <TableCell className="mono-num text-xs">{tanggal(i.due_date)}</TableCell>
                   <TableCell>
@@ -193,6 +258,17 @@ function TagihanPage() {
                     <div className="flex justify-end gap-1">
                       {i.status === "unpaid" && (
                         <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              kirimWa.mutate({ id: i.id, phone: hp[i.username] || i.phone || "" })
+                            }
+                            disabled={kirimWa.isPending}
+                            title="Kirim tagihan ke WhatsApp pelanggan"
+                          >
+                            <Send className="size-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -226,7 +302,7 @@ function TagihanPage() {
               ))}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                     {list.isLoading
                       ? "Memuat tagihan..."
                       : "Belum ada tagihan. Aktifkan tagihan otomatis di Pengaturan."}

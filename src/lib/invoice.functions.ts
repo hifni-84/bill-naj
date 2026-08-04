@@ -42,7 +42,7 @@ export const invoiceGenerate = createServerFn({ method: "POST" }).handler(async 
     const { generateInvoices } = await import("./invoice.server");
     return { ...(await generateInvoices()), error: null as string | null };
   } catch (e) {
-    return { created: 0, skipped: false, error: (e as Error).message };
+    return { created: 0, skipped: false, waSent: 0, error: (e as Error).message };
   }
 });
 
