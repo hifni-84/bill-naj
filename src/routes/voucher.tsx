@@ -591,11 +591,13 @@ function VoucherPage() {
                     variant="destructive"
                     onClick={() => {
                       if (!window.confirm(`Hapus ${terpilih.length} voucher terpilih?`)) return;
+                      const dihapus = terpilih.map((u) => u.username);
                       delUsers.mutate(
-                        terpilih.map((u) => u.username),
+                        dihapus,
                         {
                           onSuccess: () => {
-                            toast.success(`${terpilih.length} voucher dihapus`);
+                            toast.success(`${dihapus.length} voucher dihapus`);
+                            void hapusDiRouter(dihapus);
                             setPilih({});
                           },
                           onError: (e: Error) => toast.error(e.message),
