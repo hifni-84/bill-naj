@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, CreditCard, Globe, Save, Wifi, Layers, Receipt } from "lucide-react";
+import {
+  CheckCircle2,
+  CreditCard,
+  Globe,
+  Save,
+  Wifi,
+  Layers,
+  Receipt,
+  Upload,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -31,6 +41,7 @@ import {
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
+import { qrisRemove, qrisUpload } from "@/lib/qris.functions";
 import {
   defaultGatewayOptions,
   type GatewayOptions,
@@ -174,6 +185,47 @@ function PengaturanPage() {
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
     writeHybrid(next);
+  };
+
+  const [qrisBusy, setQrisBusy] = useState(false);
+
+  const uploadQris = async (file: File) => {
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Ukuran gambar maksimal 3 MB");
+      return;
+    }
+    setQrisBusy(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result).split(",")[1] ?? "");
+        fr.onerror = () => reject(new Error("Gagal membaca file"));
+        fr.readAsDataURL(file);
+      });
+      const res = await qrisUpload({ data: { mime: file.type, base64 } });
+      if (!res.ok) {
+        toast.error(res.error || "Gagal mengunggah QRIS");
+        return;
+      }
+      setInv((p) => ({ ...p, qrisUrl: res.url }));
+      toast.success("Gambar QRIS berhasil diunggah");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setQrisBusy(false);
+    }
+  };
+
+  const removeQris = async () => {
+    setQrisBusy(true);
+    const res = await qrisRemove({});
+    setQrisBusy(false);
+    if (!res.ok) {
+      toast.error(res.error || "Gagal menghapus QRIS");
+      return;
+    }
+    setInv((p) => ({ ...p, qrisUrl: "" }));
+    toast.success("Gambar QRIS dihapus");
   };
 
   const saveGateway = async (next: GatewayOptions, pesan?: string) => {
@@ -558,13 +610,57 @@ function PengaturanPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="qris">URL Gambar QRIS Statis</Label>
+                <Label htmlFor="qris">Gambar QRIS Statis</Label>
                 <Input
                   id="qris"
                   placeholder="https://domain.com/qris.png"
                   value={inv.qrisUrl}
                   onChange={(e) => setInv({ ...inv, qrisUrl: e.target.value })}
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    id="qris-file"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void uploadQris(f);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={qrisBusy}
+                    onClick={() => document.getElementById("qris-file")?.click()}
+                  >
+                    <Upload className="size-4" /> {qrisBusy ? "Mengunggah…" : "Unggah Gambar QRIS"}
+                  </Button>
+                  {inv.qrisUrl.startsWith("/api/public/qris.png") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={qrisBusy}
+                      onClick={() => void removeQris()}
+                    >
+                      <Trash2 className="size-4" /> Hapus
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Unggah langsung dari perangkat (PNG/JPG/WEBP, maks 3 MB) — gambar disimpan di
+                  server dan URL-nya terisi otomatis. Bisa juga tempel URL manual.
+                </p>
+                {inv.qrisUrl && (
+                  <img
+                    src={inv.qrisUrl}
+                    alt="Pratinjau QRIS pembayaran"
+                    className="mt-1 size-32 rounded-md border border-border bg-white object-contain p-1"
+                  />
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="wa">WhatsApp Konfirmasi</Label>
