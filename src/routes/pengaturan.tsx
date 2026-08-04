@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, CreditCard, Save, Wifi, Layers, Receipt } from "lucide-react";
+import { CheckCircle2, CreditCard, Globe, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -22,7 +22,12 @@ import {
   type BillingRole,
   type AppOptions,
 } from "@/lib/auth-store";
-import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import {
+  billingAccountGet,
+  billingAccountSave,
+  settingsGet,
+  settingsSave,
+} from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
@@ -60,6 +65,14 @@ export const Route = createFileRoute("/pengaturan")({
 
 type AccountForm = { username: string; password: string; confirm: string; configured: boolean };
 
+type PublicAccess = { host: string; port: string; https: boolean };
+const defaultPublicAccess: PublicAccess = { host: "", port: "", https: false };
+const publicKeys = {
+  host: "billing.public.host",
+  port: "billing.public.port",
+  https: "billing.public.https",
+};
+
 const roleLabels: Record<BillingRole, string> = {
   admin: "Admin",
   reseller: "Reseller",
@@ -79,6 +92,7 @@ function PengaturanPage() {
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
   const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
   const [gw, setGw] = useState<GatewayOptions>(defaultGatewayOptions);
+  const [pub, setPub] = useState<PublicAccess>(defaultPublicAccess);
 
   useEffect(() => {
     setForm(readCreds());
@@ -112,7 +126,43 @@ function PengaturanPage() {
     void gatewayOptionsGet()
       .then((r) => setGw(r.options))
       .catch(() => undefined);
+    void settingsGet()
+      .then((r) => {
+        if (!r.ok) return;
+        setPub({
+          host: r.data[publicKeys.host] ?? "",
+          port: r.data[publicKeys.port] ?? "",
+          https: r.data[publicKeys.https] === "1",
+        });
+      })
+      .catch(() => undefined);
   }, []);
+
+  const publicBase = (() => {
+    const host = pub.host.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const scheme = pub.https ? "https" : "http";
+    const port = pub.port.trim();
+    return `${scheme}://${host}${port ? `:${port}` : ""}`;
+  })();
+
+  const savePublic = async () => {
+    const host = pub.host.trim();
+    if (!host) {
+      toast.error("IP publik atau DDNS tidak boleh kosong");
+      return;
+    }
+    const res = await settingsSave({
+      data: {
+        entries: {
+          [publicKeys.host]: pub.host.trim(),
+          [publicKeys.port]: pub.port.trim(),
+          [publicKeys.https]: pub.https ? "1" : "0",
+        },
+      },
+    });
+    if ("ok" in res && res.ok === false) toast.error("Alamat publik gagal disimpan");
+    else toast.success("Alamat publik billing tersimpan");
+  };
 
   const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
     setInv(next);
@@ -331,6 +381,70 @@ function PengaturanPage() {
               aria-label="Hapus voucher expired otomatis"
             />
           </div>
+        </div>
+
+        <div className="panel p-6 lg:col-span-2">
+          <div className="mb-1 flex items-center gap-2">
+            <Globe className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold">Akses Publik (IP Publik / DDNS)</h2>
+          </div>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Isi IP publik atau domain DDNS server billing agar panel, portal pelanggan, dan callback
+            payment gateway bisa diakses dari jaringan luar.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="pub-host">IP Publik / DDNS</Label>
+              <Input
+                id="pub-host"
+                placeholder="najwa.ddns.net atau 103.10.20.30"
+                value={pub.host}
+                onChange={(e) => setPub({ ...pub, host: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pub-port">Port</Label>
+              <Input
+                id="pub-port"
+                placeholder="3000 / kosongkan bila 80-443"
+                value={pub.port}
+                onChange={(e) => setPub({ ...pub, port: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4">
+            <div>
+              <p className="text-sm font-medium">Gunakan HTTPS</p>
+              <p className="text-xs text-muted-foreground">
+                Aktifkan bila domain sudah memakai SSL (Let&apos;s Encrypt / Nginx).
+              </p>
+            </div>
+            <Switch
+              checked={pub.https}
+              onCheckedChange={(v) => setPub({ ...pub, https: v })}
+              aria-label="Gunakan HTTPS"
+            />
+          </div>
+          {pub.host.trim() && (
+            <div className="mono-num mt-4 grid gap-1 rounded-md bg-secondary/60 p-3 text-xs">
+              <p>
+                Panel billing: <span className="text-primary">{publicBase}</span>
+              </p>
+              <p>
+                Portal pelanggan: <span className="text-primary">{publicBase}/portal</span>
+              </p>
+              <p>
+                Callback pembayaran:{" "}
+                <span className="text-primary">{publicBase}/api/public/pay-callback/midtrans</span>
+              </p>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Pastikan port di atas sudah diforward di router/firewall ke server billing.
+          </p>
+          <Button className="mt-4" onClick={() => void savePublic()}>
+            <Save className="size-4" /> Simpan Alamat Publik
+          </Button>
         </div>
 
         <div className="panel p-6 lg:col-span-2">
