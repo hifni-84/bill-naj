@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi } from "lucide-react";
+import { CheckCircle2, Save, Wifi, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -22,6 +22,13 @@ import {
   type AppOptions,
 } from "@/lib/auth-store";
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import {
+  defaultHybrid,
+  readHybrid,
+  syncHybridFromServer,
+  writeHybrid,
+  type HybridOptions,
+} from "@/lib/hybrid";
 
 export const Route = createFileRoute("/pengaturan")({
   head: () => ({
@@ -48,6 +55,7 @@ function PengaturanPage() {
   const [acc, setAcc] = useState(defaultAccount);
   const [pass2, setPass2] = useState("");
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
+  const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
 
   useEffect(() => {
     setForm(readCreds());
@@ -71,7 +79,16 @@ function PengaturanPage() {
       })
       .catch(() => undefined);
     setOpts(readOptions());
+    setHybrid(readHybrid());
+    void syncHybridFromServer().then((remote) => {
+      if (remote) setHybrid(remote);
+    });
   }, []);
+
+  const saveHybrid = (next: HybridOptions) => {
+    setHybrid(next);
+    writeHybrid(next);
+  };
 
   const saveAccount = async () => {
     if (!acc.username.trim()) {
