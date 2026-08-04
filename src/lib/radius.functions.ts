@@ -15,7 +15,12 @@ export const radiusPing = createServerFn({ method: "GET" }).handler(async () => 
 
 export const radiusPlans = createServerFn({ method: "GET" }).handler(async () => {
   const { listPlans } = await import("./radius.server");
-  return listPlans();
+  try {
+    return await listPlans();
+  } catch {
+    // Database RADIUS belum tersambung: kembalikan daftar kosong.
+    return [];
+  }
 });
 
 export const radiusSavePlan = createServerFn({ method: "POST" })
