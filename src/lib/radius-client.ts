@@ -81,6 +81,35 @@ export function useRadiusMaintenance(enabled: boolean, hapusExpired = true) {
             }
           }
         }
+        // Voucher expired: hapus user-nya di MikroTik saja, data di billing tetap
+        // tersimpan dengan status expired.
+        const expiredNames: string[] = res.expiredNames ?? [];
+        if (creds.host && expiredNames.length) {
+          const set = new Set(expiredNames);
+          const [hs, ppp] = await Promise.all([
+            mt(creds, "/ip/hotspot/user"),
+            mt(creds, "/ppp/secret"),
+          ]);
+          const hsList = (Array.isArray(hs.data) ? hs.data : []) as {
+            name?: string;
+            ".id"?: string;
+          }[];
+          const pppList = (Array.isArray(ppp.data) ? ppp.data : []) as {
+            name?: string;
+            ".id"?: string;
+          }[];
+          for (const u of hsList) {
+            if (u.name && set.has(u.name) && u[".id"]) {
+              await mt(creds, `/ip/hotspot/user/${u[".id"]}`, "DELETE");
+            }
+          }
+          for (const u of pppList) {
+            if (u.name && set.has(u.name) && u[".id"]) {
+              await mt(creds, `/ppp/secret/${u[".id"]}`, "DELETE");
+            }
+          }
+          if (stop) return;
+        }
         if (res.stamped || res.expired) qc.invalidateQueries({ queryKey: ["radius"] });
       } catch {
         /* database belum siap, dicoba lagi */
