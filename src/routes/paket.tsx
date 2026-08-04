@@ -59,7 +59,10 @@ function PaketPage() {
   const delPlan = useRadiusMutation((name: string) => radiusDeletePlan({ data: { name } }));
 
   const syncPlan = async (plan: RadiusPlan) => {
-    if (!hybrid.enabled || !hybrid.syncProfile) return;
+    if (!creds.host?.trim()) {
+      toast.error("Alamat router MikroTik belum diatur di Pengaturan");
+      return;
+    }
     const res = await pushPlanToMikrotik(creds, plan);
     if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke MikroTik`);
     else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
@@ -242,6 +245,15 @@ function PaketPage() {
                   <TableCell className="mono-num">{formatIDR(p.cost_price ?? 0)}</TableCell>
                   <TableCell className="mono-num">{formatIDR(p.price)}</TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Integrasikan paket ${p.name} ke MikroTik`}
+                      title="Kirim ke MikroTik sebagai profile"
+                      onClick={() => void syncPlan(p)}
+                    >
+                      <UploadCloud className="size-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
