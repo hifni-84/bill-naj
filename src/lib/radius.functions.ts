@@ -157,9 +157,8 @@ export const radiusDeleteNas = createServerFn({ method: "POST" })
 
 export const radiusNasStatus = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: {
-      creds?: { username?: string; password?: string; port?: number; useHttps?: boolean };
-    }) => d,
+    (d: { creds?: { username?: string; password?: string; port?: number; useHttps?: boolean } }) =>
+      d,
   )
   .handler(async ({ data }) => {
     try {

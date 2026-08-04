@@ -31,15 +31,13 @@ function StatusBadge({
 }: {
   ok: boolean;
   label: string;
-  title?: string;
+  title?: string | undefined;
 }) {
   return (
     <span
       title={title}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        ok
-          ? "bg-primary/15 text-primary"
-          : "bg-destructive/15 text-destructive"
+        ok ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
       }`}
     >
       {ok ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
@@ -52,8 +50,8 @@ export function NasManager() {
   const nas = useRadiusNas();
   const status = useRadiusNasStatus();
   const statusOf = (nasname: string) => (status.data ?? []).find((s) => s.nasname === nasname);
-  const saveNas = useRadiusMutation(
-    (n: Parameters<typeof radiusSaveNas>[0]["data"]) => radiusSaveNas({ data: n }),
+  const saveNas = useRadiusMutation((n: Parameters<typeof radiusSaveNas>[0]["data"]) =>
+    radiusSaveNas({ data: n }),
   );
   const delNas = useRadiusMutation((id: number) => radiusDeleteNas({ data: { id } }));
 
@@ -183,59 +181,63 @@ export function NasManager() {
             {(nas.data ?? []).map((n) => {
               const st = statusOf(n.nasname);
               return (
-              <TableRow key={n.id}>
-                <TableCell className="mono-num font-medium">{n.nasname}</TableCell>
-                <TableCell>{n.shortname}</TableCell>
-                <TableCell className="text-xs uppercase">{n.type}</TableCell>
-                <TableCell className="mono-num text-xs">{n.secret}</TableCell>
-                <TableCell className="text-xs">{n.timezone || "Asia/Jakarta"}</TableCell>
-                <TableCell>
-                  <StatusBadge
-                    ok={Boolean(st?.radius)}
-                    label={st?.radius ? "Terhubung" : "Tidak terhubung"}
-                    title={
-                      st?.radiusLast
-                        ? `Aktivitas terakhir: ${new Date(st.radiusLast).toLocaleString()} · ${st.radiusSessions} sesi aktif`
-                        : "Belum ada aktivitas RADIUS dari NAS ini"
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    ok={Boolean(st?.api)}
-                    label={st?.api ? `Terhubung${st.identity ? ` (${st.identity})` : ""}` : "Tidak terhubung"}
-                    title={st?.apiError ?? undefined}
-                  />
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {n.description || "-"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Ubah NAS ${n.nasname}`}
-                    onClick={() => {
-                      setNId(n.id);
-                      setNIp(n.nasname);
-                      setNNama(n.shortname);
-                      setNSecret(n.secret);
-                      setNKet(n.description ?? "");
-                      setNTz(n.timezone || "Asia/Jakarta");
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Hapus NAS ${n.nasname}`}
-                    onClick={() => delNas.mutate(n.id)}
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+                <TableRow key={n.id}>
+                  <TableCell className="mono-num font-medium">{n.nasname}</TableCell>
+                  <TableCell>{n.shortname}</TableCell>
+                  <TableCell className="text-xs uppercase">{n.type}</TableCell>
+                  <TableCell className="mono-num text-xs">{n.secret}</TableCell>
+                  <TableCell className="text-xs">{n.timezone || "Asia/Jakarta"}</TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      ok={Boolean(st?.radius)}
+                      label={st?.radius ? "Terhubung" : "Tidak terhubung"}
+                      title={
+                        st?.radiusLast
+                          ? `Aktivitas terakhir: ${new Date(st.radiusLast).toLocaleString()} · ${st.radiusSessions} sesi aktif`
+                          : "Belum ada aktivitas RADIUS dari NAS ini"
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      ok={Boolean(st?.api)}
+                      label={
+                        st?.api
+                          ? `Terhubung${st.identity ? ` (${st.identity})` : ""}`
+                          : "Tidak terhubung"
+                      }
+                      title={st?.apiError ?? undefined}
+                    />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {n.description || "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Ubah NAS ${n.nasname}`}
+                      onClick={() => {
+                        setNId(n.id);
+                        setNIp(n.nasname);
+                        setNNama(n.shortname);
+                        setNSecret(n.secret);
+                        setNKet(n.description ?? "");
+                        setNTz(n.timezone || "Asia/Jakarta");
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Hapus NAS ${n.nasname}`}
+                      onClick={() => delNas.mutate(n.id)}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
               );
             })}
             {(nas.data ?? []).length === 0 && (
