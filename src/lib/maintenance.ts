@@ -19,7 +19,7 @@ import {
 } from "./mikrotik-types";
 
 /** Pemeriksaan cepat supaya login pertama langsung tercatat. */
-export const MAINTENANCE_INTERVAL_MS = 30 * 1000;
+export const MAINTENANCE_INTERVAL_MS = 60 * 1000;
 
 /** Masa aktif voucher (detik) dari limit-uptime user atau session-timeout profil. */
 function voucherLifetime(u: HotspotUser, profiles: HotspotProfile[]) {
@@ -108,7 +108,7 @@ export async function runMaintenance(
   return result;
 }
 
-/** Jalankan pemeriksaan expired & isolir tiap 5 menit. */
+/** Jalankan pemeriksaan expired & isolir tiap 1 menit. */
 export function useMaintenance(creds: MtCreds, enabled: boolean, hapusExpired = true) {
   const qc = useQueryClient();
 
@@ -126,7 +126,7 @@ export function useMaintenance(creds: MtCreds, enabled: boolean, hapusExpired = 
           qc.invalidateQueries({ queryKey: ["active"] });
         }
       } catch {
-        /* diam saja, dicoba lagi 5 menit berikutnya */
+        /* diam saja, dicoba lagi 1 menit berikutnya */
       }
     };
 

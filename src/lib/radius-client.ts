@@ -56,7 +56,7 @@ export function useRadiusMutation<TVars>(fn: (v: TVars) => Promise<unknown>) {
   return useMutation({ mutationFn: fn, onSuccess: invalidate });
 }
 
-/** Pemeriksaan expired tiap 30 detik + putus sesi user expired di MikroTik. */
+/** Pemeriksaan expired tiap 1 menit + putus sesi user expired di MikroTik. */
 export function useRadiusMaintenance(enabled: boolean, hapusExpired = true) {
   const qc = useQueryClient();
 
@@ -117,7 +117,7 @@ export function useRadiusMaintenance(enabled: boolean, hapusExpired = true) {
     };
 
     tick();
-    const id = window.setInterval(tick, 30000);
+    const id = window.setInterval(tick, 60000);
     return () => {
       stop = true;
       window.clearInterval(id);
