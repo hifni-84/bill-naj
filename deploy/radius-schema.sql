@@ -48,3 +48,21 @@ VALUES
 
 -- Zona waktu per NAS (router). Diabaikan bila kolom sudah ada.
 ALTER TABLE nas ADD COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Jakarta';
+
+-- Tagihan otomatis untuk paket masa aktif 30 hari (dibuat H-1 sebelum expired).
+CREATE TABLE IF NOT EXISTS billing_invoice (
+  id         INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  username   VARCHAR(64) NOT NULL,
+  plan       VARCHAR(64) NOT NULL,
+  service    ENUM('hotspot','pppoe') NOT NULL DEFAULT 'hotspot',
+  amount     INT NOT NULL DEFAULT 0,
+  due_date   DATETIME NULL,
+  period_end DATETIME NULL,
+  status     ENUM('unpaid','paid','cancelled') NOT NULL DEFAULT 'unpaid',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at    DATETIME NULL,
+  note       VARCHAR(255) NOT NULL DEFAULT '',
+  UNIQUE KEY uniq_periode (username, period_end),
+  KEY idx_status (status),
+  KEY idx_due (due_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

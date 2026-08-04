@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi, Layers } from "lucide-react";
+import { CheckCircle2, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { mt } from "@/lib/hotspot";
 import type { Json, MtCreds } from "@/lib/mikrotik-types";
 import { emptyCreds, readCreds, syncCredsFromServer, writeCreds } from "@/lib/router-store";
@@ -22,6 +23,8 @@ import {
   type AppOptions,
 } from "@/lib/auth-store";
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
+import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
 import {
   defaultHybrid,
   readHybrid,
@@ -63,6 +66,7 @@ function PengaturanPage() {
   const [accounts, setAccounts] = useState<Record<BillingRole, AccountForm>>(initialAccounts);
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
+  const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
 
   useEffect(() => {
     setForm(readCreds());
@@ -90,7 +94,17 @@ function PengaturanPage() {
     void syncHybridFromServer().then((remote) => {
       if (remote) setHybrid(remote);
     });
+    void invoiceOptionsGet()
+      .then((r) => setInv(r.options))
+      .catch(() => undefined);
   }, []);
+
+  const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
+    setInv(next);
+    const res = await invoiceOptionsSave({ data: { options: next } });
+    if (!res.ok) toast.error("Pengaturan tagihan gagal disimpan");
+    else if (pesan) toast.success(pesan);
+  };
 
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
@@ -351,6 +365,93 @@ function PengaturanPage() {
                 Pastikan koneksi router di panel sebelah sudah tersimpan dan lolos tes koneksi,
                 karena mode hybrid memakai kredensial tersebut.
               </p>
+            </div>
+          )}
+        </div>
+
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <Receipt className="size-4 text-primary" /> Tagihan Otomatis (Paket 30 Hari)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Setiap user hotspot maupun PPPoE dengan paket masa aktif 30 hari akan otomatis
+                ditagih sehari sebelum masa aktifnya habis. Pelanggan melihat tagihan dan QRIS
+                pembayaran di halaman publik <span className="mono-num text-foreground">/portal</span>
+                .
+              </p>
+            </div>
+            <Switch
+              checked={inv.enabled}
+              onCheckedChange={(v) =>
+                void saveInvoice(
+                  { ...inv, enabled: v },
+                  v ? "Tagihan otomatis aktif" : "Tagihan otomatis nonaktif",
+                )
+              }
+              aria-label="Aktifkan tagihan otomatis"
+            />
+          </div>
+
+          {inv.enabled && (
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="lead">Dibuat berapa hari sebelum expired</Label>
+                <Input
+                  id="lead"
+                  inputMode="numeric"
+                  value={String(inv.leadDays)}
+                  onChange={(e) =>
+                    setInv({
+                      ...inv,
+                      leadDays: Math.min(30, Math.max(1, Number(e.target.value) || 1)),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">1 = H-1 (sehari sebelum expired).</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="merchant">Nama Usaha / Merchant</Label>
+                <Input
+                  id="merchant"
+                  value={inv.merchant}
+                  onChange={(e) => setInv({ ...inv, merchant: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="qris">URL Gambar QRIS Statis</Label>
+                <Input
+                  id="qris"
+                  placeholder="https://domain.com/qris.png"
+                  value={inv.qrisUrl}
+                  onChange={(e) => setInv({ ...inv, qrisUrl: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wa">WhatsApp Konfirmasi</Label>
+                <Input
+                  id="wa"
+                  placeholder="6281234567890"
+                  value={inv.whatsapp}
+                  onChange={(e) => setInv({ ...inv, whatsapp: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="payinfo">Petunjuk Pembayaran</Label>
+                <Textarea
+                  id="payinfo"
+                  rows={3}
+                  placeholder={"Transfer BRI 1234567890 a/n Najwa\nDANA/OVO 0812xxxx"}
+                  value={inv.payInfo}
+                  onChange={(e) => setInv({ ...inv, payInfo: e.target.value })}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button onClick={() => void saveInvoice(inv, "Pengaturan tagihan disimpan")}>
+                  <Save className="size-4" /> Simpan Pengaturan Tagihan
+                </Button>
+              </div>
             </div>
           )}
         </div>
