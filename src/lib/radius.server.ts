@@ -290,9 +290,9 @@ export async function report(): Promise<RadiusReport> {
   // Voucher PAID: dihitung sejak dibuat. Voucher UNPAID: baru dihitung
   // setelah dipakai (login pertama di MikroTik).
   const jual = `CASE WHEN v.paid = 1 THEN v.created_at ELSE ${login} END`;
-  // Pendapatan dihitung dari HARGA MODAL paket. Bila harga modal belum diisi,
-  // gunakan harga voucher/paket agar pendapatan tidak hilang.
-  const harga = "COALESCE(NULLIF(p.cost_price, 0), NULLIF(v.price, 0), p.price, 0)";
+  // Pendapatan dihitung HANYA dari HARGA MODAL paket (cost_price).
+  // Paket tanpa harga modal dihitung 0, tidak memakai harga jual.
+  const harga = "COALESCE(p.cost_price, 0)";
   const bayar = `(v.paid = 1 OR ${login} IS NOT NULL)`;
   const tgl = lokal(`(${jual})`);
   const daily = await query<{ date: string; total: number; count: number }>(
