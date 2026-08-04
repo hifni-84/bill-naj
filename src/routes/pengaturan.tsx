@@ -228,11 +228,6 @@ function PengaturanPage() {
     toast.success("Gambar QRIS dihapus");
   };
 
-  const saveHybridUnused = (next: HybridOptions) => {
-    setHybrid(next);
-    writeHybrid(next);
-  };
-
   const saveGateway = async (next: GatewayOptions, pesan?: string) => {
     setGw(next);
     const res = await gatewayOptionsSave({ data: { options: next } });
