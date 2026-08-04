@@ -4,6 +4,22 @@ Panduan menjalankan Panel Billing MikroTik di Ubuntu 22.04 / 24.04.
 Keuntungan self-host: server bisa satu jaringan dengan MikroTik, jadi router
 **tidak perlu** diekspos ke internet — cukup pakai IP lokal (mis. `192.168.88.1`).
 
+## Bersihkan instalasi lama (fresh install)
+
+Jalankan sebelum instal ulang supaya server bebas sisa instalasi:
+
+```sh
+sudo bash deploy/cleanup-ubuntu.sh              # service, nginx, database radius, folder app lama
+sudo bash deploy/cleanup-ubuntu.sh --keep-db    # simpan database radius
+sudo bash deploy/cleanup-ubuntu.sh --purge      # sekalian buang nginx/mariadb/freeradius/nodejs/pm2
+sudo YES=1 bash deploy/cleanup-ubuntu.sh        # tanpa konfirmasi
+```
+
+Skrip ini menghentikan service `mikrotik-billing`, menghapus unit systemd + PM2,
+konfigurasi Nginx, database & user `radius`, konfigurasi SQL FreeRADIUS, serta
+folder aplikasi lama di `/opt`, `/var/www`, `/srv`, `/root`, `/home/*`.
+Setelah selesai lanjut ke **Cara cepat** di bawah.
+
 ## Cara cepat (otomatis)
 
 ```sh
