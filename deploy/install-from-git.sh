@@ -28,6 +28,13 @@ else
   git clone --depth 1 -b "$BRANCH" "$REPO" "$TARGET"
 fi
 
+# Repo di-clone sebagai root; install-ubuntu.sh menjalankan npm sebagai
+# APP_USER (SUDO_USER). Pastikan APP_USER punya hak tulis agar npm install
+# bisa membuat /opt/mikrotik-billing/node_modules tanpa EACCES.
+APP_USER="${SUDO_USER:-$USER}"
+[ "$APP_USER" = "root" ] && APP_USER="$(stat -c '%U' /home 2>/dev/null | grep -v '^$' | head -1)"
+[ -n "$APP_USER" ] && [ "$APP_USER" != "root" ] && chown -R "$APP_USER":"$APP_USER" "$TARGET"
+
 cd "$TARGET"
 echo "==> Menjalankan instalasi lengkap"
 bash deploy/install-all.sh
