@@ -95,20 +95,40 @@ function PaketPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="p-m">Harga Modal (Rp)</Label>
-              <Input id="p-m" inputMode="numeric" value={pCost} onChange={(e) => setPCost(e.target.value)} />
+              <Input
+                id="p-m"
+                inputMode="numeric"
+                value={pCost}
+                onChange={(e) => setPCost(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="p-h">Harga Jual (Rp)</Label>
-              <Input id="p-h" inputMode="numeric" value={pPrice} onChange={(e) => setPPrice(e.target.value)} />
+              <Input
+                id="p-h"
+                inputMode="numeric"
+                value={pPrice}
+                onChange={(e) => setPPrice(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="p-r">Bandwidth</Label>
-              <Input id="p-r" placeholder="2M/2M" value={pRate} onChange={(e) => setPRate(e.target.value)} />
+              <Input
+                id="p-r"
+                placeholder="2M/2M"
+                value={pRate}
+                onChange={(e) => setPRate(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="p-d">Masa Aktif</Label>
               <div className="flex gap-2">
-                <Input id="p-d" inputMode="decimal" value={pDays} onChange={(e) => setPDays(e.target.value)} />
+                <Input
+                  id="p-d"
+                  inputMode="decimal"
+                  value={pDays}
+                  onChange={(e) => setPDays(e.target.value)}
+                />
                 <Select value={pUnit} onValueChange={(v) => setPUnit(v as typeof pUnit)}>
                   <SelectTrigger className="w-28" aria-label="Satuan masa aktif">
                     <SelectValue />
@@ -124,7 +144,12 @@ function PaketPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="p-s">Shared Users</Label>
-              <Input id="p-s" inputMode="numeric" value={pShared} onChange={(e) => setPShared(e.target.value)} />
+              <Input
+                id="p-s"
+                inputMode="numeric"
+                value={pShared}
+                onChange={(e) => setPShared(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Layanan</Label>
@@ -143,22 +168,22 @@ function PaketPage() {
                 disabled={!pName.trim() || savePlan.isPending}
                 onClick={() => {
                   const plan: RadiusPlan = {
-                      name: pName.trim(),
-                      price: Number(pPrice) || 0,
-                      cost_price: Number(pCost) || 0,
-                      rate_limit: pRate.trim(),
-                      validity_seconds: Math.round(
-                        (Number(pDays) || 0) *
-                          (pUnit === "menit"
-                            ? 60
-                            : pUnit === "jam"
-                              ? 3600
-                              : pUnit === "bulan"
-                                ? 2592000
-                                : 86400),
-                      ),
-                      shared_users: Number(pShared) || 1,
-                      service: pService,
+                    name: pName.trim(),
+                    price: Number(pPrice) || 0,
+                    cost_price: Number(pCost) || 0,
+                    rate_limit: pRate.trim(),
+                    validity_seconds: Math.round(
+                      (Number(pDays) || 0) *
+                        (pUnit === "menit"
+                          ? 60
+                          : pUnit === "jam"
+                            ? 3600
+                            : pUnit === "bulan"
+                              ? 2592000
+                              : 86400),
+                    ),
+                    shared_users: Number(pShared) || 1,
+                    service: pService,
                   };
                   savePlan.mutate(plan, {
                     onSuccess: () => {

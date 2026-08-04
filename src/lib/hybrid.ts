@@ -27,7 +27,9 @@ export function readHybrid(): HybridOptions {
   if (typeof window === "undefined") return defaultHybrid;
   try {
     const raw = window.localStorage.getItem(HYBRID_KEY);
-    return raw ? { ...defaultHybrid, ...(JSON.parse(raw) as Partial<HybridOptions>) } : defaultHybrid;
+    return raw
+      ? { ...defaultHybrid, ...(JSON.parse(raw) as Partial<HybridOptions>) }
+      : defaultHybrid;
   } catch {
     return defaultHybrid;
   }

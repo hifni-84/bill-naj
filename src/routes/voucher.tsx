@@ -84,7 +84,11 @@ export const Route = createFileRoute("/voucher")({
 
 /** Pilihan karakter untuk kode voucher yang digenerate. */
 const KARAKTER = [
-  { id: "campur", label: "abcABC01234", chars: "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789" },
+  {
+    id: "campur",
+    label: "abcABC01234",
+    chars: "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+  },
   { id: "kecil", label: "abcdefghijkl", chars: "abcdefghijkmnpqrstuvwxyz" },
   { id: "besar-angka", label: "ABCDEFG01234", chars: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" },
   { id: "besar", label: "ABCDEFGHIJKL", chars: "ABCDEFGHJKLMNPQRSTUVWXYZ" },
@@ -166,7 +170,6 @@ function VoucherPage() {
     });
   }, [users.data, cari, filter, filterPlan, now]);
 
-
   const [templates, setTemplates] = useState<VoucherTemplate[]>([TEMPLATE_DEFAULT]);
   const [tplId, setTplId] = useState("default");
   useEffect(() => {
@@ -209,10 +212,7 @@ function VoucherPage() {
   };
 
   const tampil = useMemo(() => daftar.slice(0, 300), [daftar]);
-  const terpilih = useMemo(
-    () => tampil.filter((u) => pilih[u.username]),
-    [tampil, pilih],
-  );
+  const terpilih = useMemo(() => tampil.filter((u) => pilih[u.username]), [tampil, pilih]);
   const semuaTerpilih = tampil.length > 0 && terpilih.length === tampil.length;
 
   const togglePilih = (username: string, on: boolean) =>
@@ -271,7 +271,12 @@ function VoucherPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="v-jml">Jumlah</Label>
-              <Input id="v-jml" inputMode="numeric" value={vJumlah} onChange={(e) => setVJumlah(e.target.value)} />
+              <Input
+                id="v-jml"
+                inputMode="numeric"
+                value={vJumlah}
+                onChange={(e) => setVJumlah(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Karakter Voucher</Label>
@@ -290,15 +295,30 @@ function VoucherPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="v-pj">Panjang Kode</Label>
-              <Input id="v-pj" inputMode="numeric" value={vPanjang} onChange={(e) => setVPanjang(e.target.value)} />
+              <Input
+                id="v-pj"
+                inputMode="numeric"
+                value={vPanjang}
+                onChange={(e) => setVPanjang(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="v-pre">Awalan</Label>
-              <Input id="v-pre" placeholder="opsional" value={vPrefix} onChange={(e) => setVPrefix(e.target.value)} />
+              <Input
+                id="v-pre"
+                placeholder="opsional"
+                value={vPrefix}
+                onChange={(e) => setVPrefix(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="v-bt">Batch</Label>
-              <Input id="v-bt" placeholder="otomatis tanggal" value={vBatch} onChange={(e) => setVBatch(e.target.value)} />
+              <Input
+                id="v-bt"
+                placeholder="otomatis tanggal"
+                value={vBatch}
+                onChange={(e) => setVBatch(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label>NAS (Router)</Label>
@@ -523,8 +543,6 @@ function VoucherPage() {
           </div>
         </div>
 
-
-
         <div className="panel overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
             <h2 className="text-sm font-semibold">Daftar User RADIUS ({daftar.length})</h2>
@@ -592,17 +610,14 @@ function VoucherPage() {
                     onClick={() => {
                       if (!window.confirm(`Hapus ${terpilih.length} voucher terpilih?`)) return;
                       const dihapus = terpilih.map((u) => u.username);
-                      delUsers.mutate(
-                        dihapus,
-                        {
-                          onSuccess: () => {
-                            toast.success(`${dihapus.length} voucher dihapus`);
-                            void hapusDiRouter(dihapus);
-                            setPilih({});
-                          },
-                          onError: (e: Error) => toast.error(e.message),
+                      delUsers.mutate(dihapus, {
+                        onSuccess: () => {
+                          toast.success(`${dihapus.length} voucher dihapus`);
+                          void hapusDiRouter(dihapus);
+                          setPilih({});
                         },
-                      );
+                        onError: (e: Error) => toast.error(e.message),
+                      });
                     }}
                   >
                     <Trash2 className="size-4" /> Hapus Terpilih ({terpilih.length})
@@ -616,7 +631,9 @@ function VoucherPage() {
                   if (!window.confirm("Hapus semua voucher yang sudah expired?")) return;
                   delExpired.mutate(undefined as never, {
                     onSuccess: (r) =>
-                      toast.success(`${(r as { deleted: number }).deleted} voucher expired dihapus`),
+                      toast.success(
+                        `${(r as { deleted: number }).deleted} voucher expired dihapus`,
+                      ),
                     onError: (e: Error) => toast.error(e.message),
                   });
                 }}
@@ -657,7 +674,10 @@ function VoucherPage() {
                   const expired = isRadiusExpired(u, now);
                   const sisa = radiusRemainingSeconds(u, now);
                   return (
-                    <TableRow key={u.username} data-state={pilih[u.username] ? "selected" : undefined}>
+                    <TableRow
+                      key={u.username}
+                      data-state={pilih[u.username] ? "selected" : undefined}
+                    >
                       <TableCell>
                         <Checkbox
                           aria-label={`Pilih ${u.username}`}
@@ -665,7 +685,9 @@ function VoucherPage() {
                           onCheckedChange={(v) => togglePilih(u.username, v === true)}
                         />
                       </TableCell>
-                      <TableCell className="mono-num text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="mono-num text-xs text-muted-foreground">
+                        {i + 1}
+                      </TableCell>
                       <TableCell className="mono-num font-medium">{u.username}</TableCell>
                       <TableCell className="mono-num">{u.password}</TableCell>
                       <TableCell>{u.plan}</TableCell>
@@ -678,8 +700,12 @@ function VoucherPage() {
                           <Badge className="bg-primary/15 text-primary">Paid</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="mono-num text-xs">{formatDateTime(u.first_login ?? undefined)}</TableCell>
-                      <TableCell className="mono-num text-xs">{formatDateTime(u.expires_at ?? undefined)}</TableCell>
+                      <TableCell className="mono-num text-xs">
+                        {formatDateTime(u.first_login ?? undefined)}
+                      </TableCell>
+                      <TableCell className="mono-num text-xs">
+                        {formatDateTime(u.expires_at ?? undefined)}
+                      </TableCell>
                       <TableCell className="mono-num text-xs">
                         {sisa === null ? "belum jalan" : sisa > 0 ? formatDuration(sisa) : "Habis"}
                       </TableCell>

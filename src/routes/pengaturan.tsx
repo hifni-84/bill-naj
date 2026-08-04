@@ -234,7 +234,12 @@ function PengaturanPage() {
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="ap2">Ulangi Password</Label>
-              <Input id="ap2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} />
+              <Input
+                id="ap2"
+                type="password"
+                value={pass2}
+                onChange={(e) => setPass2(e.target.value)}
+              />
             </div>
           </div>
           <Button className="mt-5" onClick={() => void saveAccount()}>
@@ -326,21 +331,22 @@ function PengaturanPage() {
         </div>
 
         <div className="panel p-6 text-sm leading-relaxed text-muted-foreground">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">
-            Persiapan di sisi MikroTik
-          </h2>
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Persiapan di sisi MikroTik</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Aktifkan REST API: <span className="mono-num text-foreground">/ip service enable www</span>{" "}
-              (atau <span className="mono-num text-foreground">www-ssl</span> untuk HTTPS). RouterOS v7 ke atas.
+              Aktifkan REST API:{" "}
+              <span className="mono-num text-foreground">/ip service enable www</span> (atau{" "}
+              <span className="mono-num text-foreground">www-ssl</span> untuk HTTPS). RouterOS v7 ke
+              atas.
             </li>
             <li>
-              Buat user khusus dengan grup <span className="mono-num text-foreground">full</span> atau
-              grup custom berizin <span className="mono-num text-foreground">api, read, write</span>.
+              Buat user khusus dengan grup <span className="mono-num text-foreground">full</span>{" "}
+              atau grup custom berizin{" "}
+              <span className="mono-num text-foreground">api, read, write</span>.
             </li>
             <li>
-              Pastikan router dapat diakses dari internet (IP publik / VPN) dan port di atas
-              tidak diblokir firewall.
+              Pastikan router dapat diakses dari internet (IP publik / VPN) dan port di atas tidak
+              diblokir firewall.
             </li>
             <li>
               Batasi akses API hanya dari alamat tepercaya pada
