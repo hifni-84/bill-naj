@@ -22,6 +22,7 @@ import { Route as TemplateRouteImport } from './routes/template'
 import { Route as Tr069RouteImport } from './routes/tr069'
 import { Route as UserAktifRouteImport } from './routes/user-aktif'
 import { Route as VoucherRouteImport } from './routes/voucher'
+import { Route as ApiPublicPayCallbackProviderRouteImport } from './routes/api/public/pay-callback.$provider'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +89,12 @@ const VoucherRoute = VoucherRouteImport.update({
   path: '/voucher',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPayCallbackProviderRoute =
+  ApiPublicPayCallbackProviderRouteImport.update({
+    id: '/api/public/pay-callback/$provider',
+    path: '/api/public/pay-callback/$provider',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +126,7 @@ export interface FileRoutesByTo {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +143,7 @@ export interface FileRoutesById {
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
   '/voucher': typeof VoucherRoute
+  '/api/public/pay-callback/$provider': typeof ApiPublicPayCallbackProviderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/api/public/pay-callback/$provider'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/api/public/pay-callback/$provider'
   id:
     | '__root__'
     | '/'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
     | '/tr069'
     | '/user-aktif'
     | '/voucher'
+    | '/api/public/pay-callback/$provider'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +210,7 @@ export interface RootRouteChildren {
   Tr069Route: typeof Tr069Route
   UserAktifRoute: typeof UserAktifRoute
   VoucherRoute: typeof VoucherRoute
+  ApiPublicPayCallbackProviderRoute: typeof ApiPublicPayCallbackProviderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoucherRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/pay-callback/$provider': {
+      id: '/api/public/pay-callback/$provider'
+      path: '/api/public/pay-callback/$provider'
+      fullPath: '/api/public/pay-callback/$provider'
+      preLoaderRoute: typeof ApiPublicPayCallbackProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +330,7 @@ const rootRouteChildren: RootRouteChildren = {
   Tr069Route: Tr069Route,
   UserAktifRoute: UserAktifRoute,
   VoucherRoute: VoucherRoute,
+  ApiPublicPayCallbackProviderRoute: ApiPublicPayCallbackProviderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
