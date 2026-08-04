@@ -326,7 +326,7 @@ function mapDevice(raw: Record<string, unknown>): AcsDevice {
     registrationState: regKey ? String(flat[regKey] ?? "") : "",
     tags: Array.isArray(tagsRaw) ? tagsRaw.map(String) : [],
     lastInform,
-    online: informTime > 0 && Date.now() - informTime < 10 * 60 * 1000,
+    online: informTime > 0 && Date.now() - informTime < onlineWindow,
     hostsActive,
     wifiClients,
     totalUsers: hostsActive + wifiClients,
