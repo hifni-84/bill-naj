@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthGate } from "@/components/AuthGate";
 import { MaintenanceRunner } from "@/components/MaintenanceRunner";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ReadOnlyGuard } from "@/components/ReadOnlyGuard";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -156,6 +157,7 @@ function RootComponent() {
         <div className="flex min-h-screen w-full">
           <AppSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
+            <ReadOnlyGuard />
             <header className="no-print sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
               <SidebarTrigger />
               <span className="text-sm font-medium text-muted-foreground">
