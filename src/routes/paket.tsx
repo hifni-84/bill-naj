@@ -231,7 +231,7 @@ function PaketPage() {
                 <TableHead>Shared</TableHead>
                 <TableHead>Harga Modal</TableHead>
                 <TableHead>Harga Jual</TableHead>
-                <TableHead className="w-16 text-right">Aksi</TableHead>
+                <TableHead className="w-24 text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
