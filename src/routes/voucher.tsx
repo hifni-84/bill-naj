@@ -520,6 +520,21 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
+            {bulanan(mPlan) && (
+              <div className="flex min-w-0 flex-col gap-2">
+                <Label htmlFor="m-wa">No. WhatsApp Pelanggan</Label>
+                <Input
+                  id="m-wa"
+                  inputMode="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={mPhone}
+                  onChange={(e) => setMPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tagihan otomatis paket bulanan dikirim ke nomor ini.
+                </p>
+              </div>
+            )}
             <div className="col-span-full flex justify-end pt-1">
               <Button
                 className="w-full sm:w-auto"
@@ -539,6 +554,7 @@ function VoucherPage() {
                           service: p.service,
                           paid: mPaid === "paid",
                           nas: mNas === "semua" ? "" : mNas,
+                          phone: bulanan(p.name) ? mPhone.trim() : "",
                         },
                       ],
                     },
@@ -556,6 +572,7 @@ function VoucherPage() {
                         ]);
                         setMUser("");
                         setMPass("");
+                        setMPhone("");
                       },
                       onError: (e: Error) => toast.error(e.message),
                     },
