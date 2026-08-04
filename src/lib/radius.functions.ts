@@ -237,7 +237,7 @@ export const backupImport = createServerFn({ method: "POST" })
       const parsed = JSON.parse(data.payload) as import("./backup.server").BackupData;
       if (!parsed || typeof parsed !== "object") throw new Error("Isi file backup tidak valid");
       const res = await importBackup(parsed, data.replace);
-      return { ok: true as const, ...res };
+      return { ...res, ok: true as const };
     } catch (e) {
       return { ok: false as const, error: (e as Error).message };
     }
