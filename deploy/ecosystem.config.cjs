@@ -18,5 +18,19 @@ module.exports = {
       max_restarts: 10,
       restart_delay: 3000,
     },
+    {
+      // WhatsApp API self-hosted (Baileys / QR scan).
+      // Jalankan: cd deploy/wa-gateway && npm install  (sekali)
+      name: "wa-gateway",
+      script: "index.js",
+      cwd: __dirname + "/wa-gateway",
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        WA_PORT: "3100",
+      },
+      max_restarts: 10,
+      restart_delay: 3000,
+    },
   ],
 };

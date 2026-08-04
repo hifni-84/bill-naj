@@ -155,7 +155,7 @@ export type GatewayPublic = { provider: GatewayProvider; sandbox: boolean; metho
 
 /* ------------------------- WhatsApp Gateway (penagihan otomatis) ------------------------- */
 
-export type WaProvider = "fonnte" | "wablas" | "custom";
+export type WaProvider = "fonnte" | "wablas" | "custom" | "self";
 
 export type WaOptions = {
   /** Kirim tagihan otomatis lewat WhatsApp */
