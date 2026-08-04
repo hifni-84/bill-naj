@@ -1,5 +1,36 @@
 # Panduan Install NAJWA_BILLING di Ubuntu via PuTTY
 
+## CARA TERCEPAT — Install langsung dari GitHub (1 perintah)
+
+Login PuTTY sebagai root, lalu ketik:
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/hifni-84/bill-naj/main/deploy/install-from-git.sh)"
+```
+
+Script itu otomatis: install git → clone repo ke `/opt/mikrotik-billing` → jalankan `deploy/install-all.sh`
+(Node.js 22, Nginx, build, systemd, MariaDB, FreeRADIUS, skema DB, NAS MikroTik).
+
+Kalau ingin server bersih dulu:
+
+```bash
+apt-get update -y && apt-get install -y git
+git clone https://github.com/hifni-84/bill-naj.git /opt/mikrotik-billing
+cd /opt/mikrotik-billing
+sudo bash deploy/cleanup-ubuntu.sh      # tambah --purge untuk buang paket lama
+sudo bash deploy/install-all.sh
+```
+
+Update ke versi terbaru nanti:
+
+```bash
+cd /opt/mikrotik-billing && git pull && sudo bash deploy/install-ubuntu.sh
+```
+
+---
+
+## CARA MANUAL (upload ZIP)
+
 ## LANGKAH 1 — Download project (di komputer Anda)
 
 1. Buka project di Lovable editor
