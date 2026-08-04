@@ -184,9 +184,14 @@ function collectWans(flat: Flat): AcsWan[] {
     if (seen.has(root)) continue;
     seen.add(root);
     const kind = m[2] === "WANPPPConnection" ? "PPPoE" : "IP";
-    const vlanKey = Object.keys(flat).find(
-      (k) => k.startsWith(`${root}.`) && /VLANID|VLANIDMark|X_.*_VLANID/i.test(k),
-    );
+    // VLAN bisa berada di dalam koneksi, atau di level WANConnectionDevice induknya
+    const connDevice = root.replace(/\.(WANPPPConnection|WANIPConnection)\.\d+$/, "");
+    const vlanRe = /(VLANID|VLANIDMark|VLAN$|_VLAN|VID$|TagValue$)/i;
+    const vlanKey =
+      Object.keys(flat).find((k) => k.startsWith(`${root}.`) && vlanRe.test(k)) ??
+      Object.keys(flat).find(
+        (k) => k.startsWith(`${connDevice}.`) && vlanRe.test(k) && String(flat[k] ?? "").length,
+      );
     wans.push({
       path: root,
       parentPath: `${root.replace(/\.\d+$/, "")}.`,
