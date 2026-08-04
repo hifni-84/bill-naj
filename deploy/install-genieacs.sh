@@ -14,17 +14,41 @@ apt-get install -y curl gnupg ca-certificates ufw
 
 echo "==> 2/6 Pasang MongoDB"
 if ! command -v mongod >/dev/null 2>&1; then
-  if ! apt-get install -y mongodb-server 2>/dev/null; then
-    . /etc/os-release
-    curl -fsSL https://pgp.mongodb.com/server-7.0.asc \
-      | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
-    echo "deb [signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg] https://repo.mongodb.org/apt/ubuntu ${UBUNTU_CODENAME:-jammy}/mongodb-org/7.0 multiverse" \
-      > /etc/apt/sources.list.d/mongodb-org-7.0.list
+  . /etc/os-release
+  CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-jammy}}"
+  # MongoDB 7.0 tidak menyediakan paket untuk Ubuntu 24.04 (noble) -> pakai 8.0
+  case "$CODENAME" in
+    noble|oracular|plucky) MONGO_VER=8.0 ;;
+    *) MONGO_VER=7.0 ;;
+  esac
+  rm -f /etc/apt/sources.list.d/mongodb-org-*.list
+  curl -fsSL "https://pgp.mongodb.com/server-${MONGO_VER}.asc" \
+    | gpg --dearmor --yes -o "/usr/share/keyrings/mongodb-server-${MONGO_VER}.gpg"
+  echo "deb [signed-by=/usr/share/keyrings/mongodb-server-${MONGO_VER}.gpg] https://repo.mongodb.org/apt/ubuntu ${CODENAME}/mongodb-org/${MONGO_VER} multiverse" \
+    > "/etc/apt/sources.list.d/mongodb-org-${MONGO_VER}.list"
+  apt-get update -y || true
+  if ! apt-get install -y mongodb-org; then
+    echo "!! Repo ${CODENAME} tidak tersedia, mencoba paket jammy"
+    sed -i "s| ${CODENAME}/| jammy/|" "/etc/apt/sources.list.d/mongodb-org-${MONGO_VER}.list"
     apt-get update -y
     apt-get install -y mongodb-org
   fi
 fi
+
+mkdir -p /var/lib/mongodb /var/log/mongodb
+chown -R mongodb:mongodb /var/lib/mongodb /var/log/mongodb 2>/dev/null || true
 systemctl enable --now mongod 2>/dev/null || systemctl enable --now mongodb 2>/dev/null || true
+for _ in {1..20}; do
+  ss -tln 2>/dev/null | grep -q ':27017' && break
+  sleep 1
+done
+if ! ss -tln 2>/dev/null | grep -q ':27017'; then
+  echo "!! MongoDB tidak berjalan. GenieACS tidak mungkin hidup tanpa MongoDB."
+  systemctl status mongod --no-pager -l || true
+  journalctl -u mongod -n 40 --no-pager || true
+  exit 1
+fi
+echo "MongoDB aktif di port 27017."
 
 echo "==> 3/6 Pastikan Node.js 20+ tersedia"
 NODE_MAJOR=$(node -v 2>/dev/null | sed 's/v\([0-9]*\).*/\1/' || echo 0)
@@ -115,7 +139,7 @@ echo "==> 6/6 Buka firewall & verifikasi"
 ufw allow 7547/tcp >/dev/null 2>&1 || true   # CWMP (ONU -> ACS)
 ufw allow 7557/tcp >/dev/null 2>&1 || true   # NBI API (panel billing)
 ufw allow 7567/tcp >/dev/null 2>&1 || true   # File server
-ufw allow 3000/tcp >/dev/null 2>&1 || true   # GenieACS UI
+ufw allow 3001/tcp >/dev/null 2>&1 || true   # GenieACS UI
 
 for _ in {1..20}; do
   if curl -sf "http://127.0.0.1:7557/devices/?limit=1" >/dev/null; then
