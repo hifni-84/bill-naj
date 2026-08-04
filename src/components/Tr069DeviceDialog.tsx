@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Save, Search, Trash2, Plus, RotateCcw } from "lucide-react";
+import { Save, Search, Trash2, Plus, RotateCcw, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
   acsDeleteWan,
   acsFactoryReset,
   acsParams,
+  acsDiscover,
   acsSetParams,
   acsSetVlan,
 } from "@/lib/genieacs.functions";
@@ -123,8 +124,22 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
     const q = cariParam.trim().toLowerCase();
     const all = params.data?.params ?? [];
     const f = q ? all.filter((p) => p.path.toLowerCase().includes(q)) : all;
-    return f.slice(0, 300);
+    return f.slice(0, 2000);
   }, [params.data, cariParam]);
+
+  const tarikSemua = useMutation({
+    mutationFn: async () => {
+      const res = await acsDiscover({ data: { creds: readAcs(), deviceId: device!.id } });
+      if (!res.ok) throw new Error((res as { error?: string }).error ?? "Gagal");
+      return res;
+    },
+    onSuccess: async () => {
+      toast.success("Permintaan seluruh parameter dikirim ke ONU");
+      await new Promise((r) => setTimeout(r, 4000));
+      void params.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   function wanParents(d: AcsDevice) {
     const set = new Map<string, string>();
@@ -744,15 +759,31 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
 
           {/* ---------------- PARAMETER ---------------- */}
           <TabsContent value="param" className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Cari parameter, mis. SSID, VLAN, PPP, Hosts…"
-                value={cariParam}
-                onChange={(e) => setCariParam(e.target.value)}
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Cari parameter, mis. SSID, VLAN, PPP, Hosts…"
+                  value={cariParam}
+                  onChange={(e) => setCariParam(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="outline"
+                disabled={tarikSemua.isPending}
+                onClick={() => tarikSemua.mutate(undefined as never)}
+              >
+                <Download className="size-4" />
+                {tarikSemua.isPending ? "Menarik…" : "Tarik semua parameter"}
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Terbaca {params.data?.params?.length ?? 0} parameter.{" "}
+              {device && !device.online
+                ? "ONU sedang offline — tugas akan dijalankan saat ONU inform berikutnya."
+                : "Klik “Tarik semua parameter” lalu tunggu beberapa detik dan muat ulang."}
+            </p>
             <div className="max-h-72 overflow-auto rounded-lg border border-border">
               <table className="w-full text-[11px]">
                 <tbody>

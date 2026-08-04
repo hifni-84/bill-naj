@@ -161,3 +161,14 @@ export const acsParams = createServerFn({ method: "POST" })
       return { ok: false as const, error: (e as Error).message, params: [] };
     }
   });
+
+export const acsDiscover = createServerFn({ method: "POST" })
+  .inputValidator((d: { creds: AcsCreds; deviceId: string }) => d)
+  .handler(async ({ data }) => {
+    const { discoverAcsParams } = await import("./genieacs.server");
+    try {
+      return await discoverAcsParams(data.creds, data.deviceId);
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });

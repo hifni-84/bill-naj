@@ -379,6 +379,32 @@ export async function rebootAcsDevice(creds: AcsCreds, deviceId: string) {
   return { ok: true as const };
 }
 
+/**
+ * Penjelajahan penuh: minta ONU mengirimkan SEMUA nama + nilai parameter.
+ * getParameterNames(nextLevel=false) menelusuri seluruh subtree, lalu
+ * refreshObject mengambil nilainya.
+ */
+export async function discoverAcsParams(creds: AcsCreds, deviceId: string) {
+  const roots = ["InternetGatewayDevice", "Device"];
+  let queued = 0;
+  const errors: string[] = [];
+  for (const root of roots) {
+    for (const task of [
+      { name: "getParameterNames", objectName: `${root}.`, nextLevel: false },
+      { name: "refreshObject", objectName: root },
+    ]) {
+      try {
+        await postTask(creds, deviceId, task);
+        queued += 1;
+      } catch (e) {
+        errors.push((e as Error).message);
+      }
+    }
+  }
+  if (!queued) throw new Error(errors[0] ?? "Tidak ada tugas yang bisa dikirim");
+  return { ok: true as const, queued };
+}
+
 export async function factoryResetAcsDevice(creds: AcsCreds, deviceId: string) {
   await postTask(creds, deviceId, { name: "factoryReset" });
   return { ok: true as const };
