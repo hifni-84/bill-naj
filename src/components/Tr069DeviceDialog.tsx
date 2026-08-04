@@ -157,7 +157,8 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
     mutationFn: guard(async () => {
       if (!device || !w) throw new Error("WLAN tidak ditemukan pada perangkat ini");
       const values: Array<{ path: string; value: string; type?: string }> = [];
-      if (ssid.trim() && ssid.trim() !== w.ssid) values.push({ path: w.ssidPath, value: ssid.trim() });
+      if (ssid.trim() && ssid.trim() !== w.ssid)
+        values.push({ path: w.ssidPath, value: ssid.trim() });
       if (pass.trim()) values.push({ path: w.passwordPath, value: pass.trim() });
       if (channel.trim() && channel.trim() !== w.channel)
         values.push({ path: w.channelPath, value: channel.trim(), type: "xsd:unsignedInt" });
@@ -306,9 +307,7 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
               <Field label="CPU" value={device?.cpuUsage ? `${device.cpuUsage}%` : ""} />
               <Field
                 label="Memori bebas / total"
-                value={
-                  device?.memoryTotal ? `${device.memoryFree} / ${device.memoryTotal} KB` : ""
-                }
+                value={device?.memoryTotal ? `${device.memoryFree} / ${device.memoryTotal} KB` : ""}
               />
               <Field label="PON mode" value={device?.ponMode ?? ""} />
               <Field label="Registration state" value={device?.registrationState ?? ""} />
@@ -444,7 +443,10 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                   <Switch checked={wlanOn} onCheckedChange={setWlanOn} />
                 </div>
               </div>
-              <Button onClick={() => simpanWifi.mutate(undefined as never)} disabled={simpanWifi.isPending}>
+              <Button
+                onClick={() => simpanWifi.mutate(undefined as never)}
+                disabled={simpanWifi.isPending}
+              >
                 <Save className="size-4" /> Simpan ke ONU
               </Button>
             </div>
@@ -475,7 +477,10 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                     </Button>
                   </div>
                   <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                    <Field label="Status" value={x.status || (x.enabled ? "Enabled" : "Disabled")} />
+                    <Field
+                      label="Status"
+                      value={x.status || (x.enabled ? "Enabled" : "Disabled")}
+                    />
                     <Field label="Username" value={x.username} />
                     <Field label="IP" value={x.ip} />
                     <Field label="Netmask" value={x.netmask} />
@@ -484,7 +489,10 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                     <Field label="NAT" value={x.natEnabled ? "Aktif" : "Mati"} />
                     <Field label="Uptime" value={fmtUptime(x.uptime)} />
                     <Field label="MAC" value={x.macAddress} />
-                    <Field label="Tx / Rx" value={`${fmtBytes(x.bytesSent)} / ${fmtBytes(x.bytesReceived)}`} />
+                    <Field
+                      label="Tx / Rx"
+                      value={`${fmtBytes(x.bytesSent)} / ${fmtBytes(x.bytesReceived)}`}
+                    />
                     <Field label="Tipe koneksi" value={x.connectionType} />
                     <Field label="Slot" value={x.index} />
                   </div>
@@ -605,7 +613,10 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                   </>
                 )}
               </div>
-              <Button onClick={() => tambahWan.mutate(undefined as never)} disabled={tambahWan.isPending}>
+              <Button
+                onClick={() => tambahWan.mutate(undefined as never)}
+                disabled={tambahWan.isPending}
+              >
                 <Plus className="size-4" /> Tambah WAN
               </Button>
             </div>
@@ -644,7 +655,9 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
             </div>
 
             <div className="space-y-3 rounded-lg border border-border p-3">
-              <p className="text-xs font-medium text-muted-foreground">Tambah / ubah VLAN pada WAN</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Tambah / ubah VLAN pada WAN
+              </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="flex min-w-0 flex-col gap-2">
                   <Label>WAN tujuan</Label>
@@ -663,14 +676,25 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                 </div>
                 <div className="flex min-w-0 flex-col gap-2">
                   <Label>VLAN ID</Label>
-                  <Input value={vlanId} onChange={(e) => setVlanId(e.target.value)} placeholder="100" />
+                  <Input
+                    value={vlanId}
+                    onChange={(e) => setVlanId(e.target.value)}
+                    placeholder="100"
+                  />
                 </div>
                 <div className="flex min-w-0 flex-col gap-2">
                   <Label>Prioritas (802.1p)</Label>
-                  <Input value={vlanPrio} onChange={(e) => setVlanPrio(e.target.value)} placeholder="0" />
+                  <Input
+                    value={vlanPrio}
+                    onChange={(e) => setVlanPrio(e.target.value)}
+                    placeholder="0"
+                  />
                 </div>
               </div>
-              <Button onClick={() => simpanVlan.mutate(undefined as never)} disabled={simpanVlan.isPending}>
+              <Button
+                onClick={() => simpanVlan.mutate(undefined as never)}
+                disabled={simpanVlan.isPending}
+              >
                 <Save className="size-4" /> Terapkan VLAN
               </Button>
             </div>
@@ -765,7 +789,10 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
                 <Input value={paramValue} onChange={(e) => setParamValue(e.target.value)} />
               </div>
             </div>
-            <Button onClick={() => simpanParam.mutate(undefined as never)} disabled={simpanParam.isPending}>
+            <Button
+              onClick={() => simpanParam.mutate(undefined as never)}
+              disabled={simpanParam.isPending}
+            >
               <Save className="size-4" /> Kirim parameter
             </Button>
           </TabsContent>

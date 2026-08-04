@@ -1,12 +1,5 @@
 import type { AcsCreds } from "./genieacs-store";
-import type {
-  AcsDevice,
-  AcsHost,
-  AcsParam,
-  AcsVlan,
-  AcsWan,
-  AcsWlan,
-} from "./genieacs-types";
+import type { AcsDevice, AcsHost, AcsParam, AcsVlan, AcsWan, AcsWlan } from "./genieacs-types";
 
 type Flat = Record<string, unknown>;
 
@@ -387,12 +380,7 @@ export async function setAcsVlan(
   const root = input.wanPath.replace(/\.$/, "");
   const paths = input.vlanPath
     ? [input.vlanPath]
-    : [
-        `${root}.X_VLANID`,
-        `${root}.X_ZTE-COM_VLANID`,
-        `${root}.X_HW_VLAN`,
-        `${root}.VLANIDMark`,
-      ];
+    : [`${root}.X_VLANID`, `${root}.X_ZTE-COM_VLANID`, `${root}.X_HW_VLAN`, `${root}.VLANIDMark`];
   const values = paths.map((p) => ({ path: p, value: input.vlan, type: "xsd:unsignedInt" }));
   if (input.priority) {
     values.push({
@@ -418,7 +406,6 @@ export async function listAcsParams(creds: AcsCreds, deviceId: string): Promise<
     .sort()
     .map((path) => ({ path, value: String(flat[path] ?? ""), writable: true }));
 }
-
 
 export type AcsWanInput = {
   /** path induk, diakhiri titik, mis. ...WANConnectionDevice.1.WANPPPConnection. */
@@ -457,9 +444,7 @@ export async function addAcsWan(creds: AcsCreds, deviceId: string, input: AcsWan
   const idx = Math.max(...indexes);
   const root = `${parent}${idx}`;
 
-  const values: Array<[string, string, string]> = [
-    [`${root}.Enable`, "true", "xsd:boolean"],
-  ];
+  const values: Array<[string, string, string]> = [[`${root}.Enable`, "true", "xsd:boolean"]];
   if (input.name) values.push([`${root}.Name`, input.name, "xsd:string"]);
   if (input.vlan) values.push([`${root}.X_VLANID`, input.vlan, "xsd:unsignedInt"]);
   if (input.kind === "PPPoE") {
@@ -485,4 +470,3 @@ export async function deleteAcsWan(creds: AcsCreds, deviceId: string, path: stri
   await postTask(creds, deviceId, { name: "deleteObject", objectName: path });
   return { ok: true as const };
 }
-

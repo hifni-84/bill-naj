@@ -38,7 +38,6 @@ export const acsDeleteWan = createServerFn({ method: "POST" })
     }
   });
 
-
 export const acsDevices = createServerFn({ method: "POST" })
   .inputValidator((d: { creds: AcsCreds }) => d)
   .handler(async ({ data }) => {
