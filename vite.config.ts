@@ -7,6 +7,10 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // Pada build di luar Lovable (Ubuntu/CI), hard-pin preset ke node-server
+  // agar menghasilkan .output/server/index.mjs untuk dijalankan dengan Node.js.
+  // Di dalam sandbox Lovable preset tetap dipaksa ke Cloudflare (tidak terpengaruh).
+  nitro: { preset: "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
