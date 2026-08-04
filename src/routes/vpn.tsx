@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Copy, Plus, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Copy, Plus, RefreshCw, Stethoscope, Trash2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
@@ -16,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { wgAdd, wgInfo, wgPeers, wgRemove, wgScript } from "@/lib/wireguard.functions";
+import { wgAdd, wgInfo, wgPeers, wgRemove, wgScript, wgTest } from "@/lib/wireguard.functions";
+import { useCreds } from "@/lib/router-store";
 
 export const Route = createFileRoute("/vpn")({
   head: () => ({
@@ -49,6 +50,7 @@ function waktuHandshake(sec: number) {
 
 function VpnPage() {
   const qc = useQueryClient();
+  const { creds } = useCreds();
   const info = useQuery({ queryKey: ["wg", "info"], queryFn: () => wgInfo() });
   const peers = useQuery({
     queryKey: ["wg", "peers"],
@@ -59,6 +61,7 @@ function VpnPage() {
   const [nama, setNama] = useState("");
   const [secret, setSecret] = useState("rahasia123");
   const [script, setScript] = useState<{ name: string; peerIp: string; text: string } | null>(null);
+  const [diag, setDiag] = useState<string[] | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["wg"] });
 
@@ -99,6 +102,38 @@ function VpnPage() {
       toast.success("Router dihapus dari tunnel");
       invalidate();
     },
+  });
+
+  const tes = useMutation({
+    mutationFn: (id: number) =>
+      wgTest({
+        data: {
+          id,
+          creds: {
+            username: creds.username,
+            password: creds.password,
+            ...(creds.port !== undefined ? { port: creds.port } : {}),
+            ...(creds.useHttps !== undefined ? { useHttps: creds.useHttps } : {}),
+          },
+        },
+      }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(res.error ?? "Gagal menguji");
+        return;
+      }
+      const baris = [
+        `Router: ${res.name} (${res.peerIp})`,
+        `Peer terdaftar di server: ${res.inConf ? "ya" : "tidak"}`,
+        `Handshake tunnel: ${res.lastHandshake ? waktuHandshake(res.lastHandshake) : "belum pernah"}`,
+        `REST API router: ${res.api ? "terhubung" : `gagal — ${res.apiError ?? "-"}`}`,
+        ...res.saran.map((s) => `• ${s}`),
+      ];
+      setDiag(baris);
+      if (res.api && res.lastHandshake) toast.success("Router kedua terhubung penuh");
+      else toast.warning("Belum terhubung — lihat hasil diagnosa");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const salin = (text: string) => {
@@ -201,6 +236,16 @@ function VpnPage() {
       )}
 
       <div className="panel overflow-hidden">
+        {diag && (
+          <div className="border-b border-border px-4 py-3">
+            <p className="mb-1 text-xs font-semibold">Hasil Diagnosa</p>
+            <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+              {diag.map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -234,6 +279,15 @@ function VpnPage() {
                       onClick={() => lihatScript.mutate(p.id)}
                     >
                       <Copy className="mr-1 size-3.5" /> Config
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mr-2"
+                      disabled={tes.isPending}
+                      onClick={() => tes.mutate(p.id)}
+                    >
+                      <Stethoscope className="mr-1 size-3.5" /> Tes
                     </Button>
                     <Button
                       size="sm"
