@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi } from "lucide-react";
+import { CheckCircle2, Save, Wifi, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -22,6 +22,13 @@ import {
   type AppOptions,
 } from "@/lib/auth-store";
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
+import {
+  defaultHybrid,
+  readHybrid,
+  syncHybridFromServer,
+  writeHybrid,
+  type HybridOptions,
+} from "@/lib/hybrid";
 
 export const Route = createFileRoute("/pengaturan")({
   head: () => ({
@@ -48,6 +55,7 @@ function PengaturanPage() {
   const [acc, setAcc] = useState(defaultAccount);
   const [pass2, setPass2] = useState("");
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
+  const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
 
   useEffect(() => {
     setForm(readCreds());
@@ -71,7 +79,16 @@ function PengaturanPage() {
       })
       .catch(() => undefined);
     setOpts(readOptions());
+    setHybrid(readHybrid());
+    void syncHybridFromServer().then((remote) => {
+      if (remote) setHybrid(remote);
+    });
   }, []);
+
+  const saveHybrid = (next: HybridOptions) => {
+    setHybrid(next);
+    writeHybrid(next);
+  };
 
   const saveAccount = async () => {
     if (!acc.username.trim()) {
@@ -217,7 +234,12 @@ function PengaturanPage() {
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="ap2">Ulangi Password</Label>
-              <Input id="ap2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} />
+              <Input
+                id="ap2"
+                type="password"
+                value={pass2}
+                onChange={(e) => setPass2(e.target.value)}
+              />
             </div>
           </div>
           <Button className="mt-5" onClick={() => void saveAccount()}>
@@ -244,26 +266,87 @@ function PengaturanPage() {
           </div>
         </div>
 
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <Layers className="size-4 text-primary" /> Billing Hybrid (RADIUS + MikroTik)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Jika diaktifkan, setiap paket dan voucher yang dibuat atau digenerate tersimpan di
+                database RADIUS sekaligus langsung dibuat di router MikroTik (hotspot user profile /
+                ppp profile dan hotspot user / ppp secret).
+              </p>
+            </div>
+            <Switch
+              checked={hybrid.enabled}
+              onCheckedChange={(v) => {
+                saveHybrid({ ...hybrid, enabled: v });
+                toast.success(v ? "Mode hybrid aktif" : "Mode hybrid nonaktif (hanya RADIUS)");
+              }}
+              aria-label="Aktifkan mode billing hybrid"
+            />
+          </div>
+
+          {hybrid.enabled && (
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Sinkronkan Paket → Profile</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paket dibuat sebagai profile di router beserta bandwidth, shared users, dan masa
+                    aktif.
+                  </p>
+                </div>
+                <Switch
+                  checked={hybrid.syncProfile}
+                  onCheckedChange={(v) => saveHybrid({ ...hybrid, syncProfile: v })}
+                  aria-label="Sinkronkan paket ke profile MikroTik"
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Sinkronkan Voucher → Router</p>
+                  <p className="text-xs text-muted-foreground">
+                    Voucher hasil generate dan user manual langsung dibuat di hotspot user / ppp
+                    secret.
+                  </p>
+                </div>
+                <Switch
+                  checked={hybrid.syncVoucher}
+                  onCheckedChange={(v) => saveHybrid({ ...hybrid, syncVoucher: v })}
+                  aria-label="Sinkronkan voucher ke MikroTik"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Pastikan koneksi router di panel sebelah sudah tersimpan dan lolos tes koneksi,
+                karena mode hybrid memakai kredensial tersebut.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="lg:col-span-2">
           <NasManager />
         </div>
 
         <div className="panel p-6 text-sm leading-relaxed text-muted-foreground">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">
-            Persiapan di sisi MikroTik
-          </h2>
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Persiapan di sisi MikroTik</h2>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Aktifkan REST API: <span className="mono-num text-foreground">/ip service enable www</span>{" "}
-              (atau <span className="mono-num text-foreground">www-ssl</span> untuk HTTPS). RouterOS v7 ke atas.
+              Aktifkan REST API:{" "}
+              <span className="mono-num text-foreground">/ip service enable www</span> (atau{" "}
+              <span className="mono-num text-foreground">www-ssl</span> untuk HTTPS). RouterOS v7 ke
+              atas.
             </li>
             <li>
-              Buat user khusus dengan grup <span className="mono-num text-foreground">full</span> atau
-              grup custom berizin <span className="mono-num text-foreground">api, read, write</span>.
+              Buat user khusus dengan grup <span className="mono-num text-foreground">full</span>{" "}
+              atau grup custom berizin{" "}
+              <span className="mono-num text-foreground">api, read, write</span>.
             </li>
             <li>
-              Pastikan router dapat diakses dari internet (IP publik / VPN) dan port di atas
-              tidak diblokir firewall.
+              Pastikan router dapat diakses dari internet (IP publik / VPN) dan port di atas tidak
+              diblokir firewall.
             </li>
             <li>
               Batasi akses API hanya dari alamat tepercaya pada
