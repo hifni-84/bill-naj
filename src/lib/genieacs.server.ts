@@ -247,6 +247,15 @@ function mapDevice(raw: Record<string, unknown>): AcsDevice {
   );
   const pppKey = Object.keys(flat).find((k) => /WANPPPConnection\.\d+\.Username$/.test(k));
   const informTime = lastInform ? new Date(lastInform).getTime() : 0;
+  // Ambang online mengikuti interval inform ONU (default 300s), minimal 10 menit.
+  const informInterval = Number(
+    pick(
+      flat,
+      "InternetGatewayDevice.ManagementServer.PeriodicInformInterval",
+      "Device.ManagementServer.PeriodicInformInterval",
+    ) || 300,
+  );
+  const onlineWindow = Math.max(10 * 60 * 1000, informInterval * 2.5 * 1000);
   const txKey = Object.keys(flat).find((k) => /TXPower|TxPower|TXOpticalPower/i.test(k));
   const tempKey = Object.keys(flat).find((k) => /Temperature/i.test(k));
   const macKey = Object.keys(flat).find((k) => /MACAddress$/i.test(k));
