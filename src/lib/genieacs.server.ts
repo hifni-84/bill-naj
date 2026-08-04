@@ -154,9 +154,14 @@ function collectHosts(flat: Flat): AcsHost[] {
 function collectVlans(flat: Flat): AcsVlan[] {
   const out: AcsVlan[] = [];
   for (const path of Object.keys(flat)) {
-    if (!/(^|\.)(X_[^.]*_)?VLAN(ID|IDMark)?$/i.test(path) && !/VLANID$/i.test(path)) continue;
+    // cocokkan berbagai nama vendor: VLANID, VLANIDMark, X_..._VLANID, VID, TagValue, VLANIDMark
+    if (
+      !/(^|\.)(X_[^.]*_)?(VLAN(ID)?(Mark)?|VID|TagValue|VLANIDMark)$/i.test(path) &&
+      !/VLAN/i.test(path.split(".").pop() ?? "")
+    )
+      continue;
     const value = String(flat[path] ?? "");
-    if (!value.length) continue;
+    if (!value.length || value === "0" || value === "-1") continue;
     const scope = /WANPPPConnection/.test(path)
       ? "WAN PPPoE"
       : /WANIPConnection/.test(path)
