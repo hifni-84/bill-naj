@@ -257,6 +257,7 @@ function Tr069Page() {
                   <td className="py-2 pr-3">{fmtUptime(d.uptime)}</td>
                   <td className="py-2 pr-3">
                     <span
+                      title={d.lastInform ? `Inform terakhir: ${new Date(d.lastInform).toLocaleString("id-ID")}` : "Belum pernah inform"}
                       className={`rounded-full px-2 py-0.5 text-xs ${
                         d.online ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                       }`}
