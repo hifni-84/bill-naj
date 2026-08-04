@@ -301,64 +301,68 @@ export type RadiusReport = {
 export async function report(): Promise<RadiusReport> {
   await ensurePaidColumn();
   await ensureCostColumn();
-  // Semua waktu di database disimpan UTC. Laporan harian/bulanan memakai
-  // zona waktu lokal (default WIB +07:00) sehingga satu hari dihitung dari
-  // 00:00:01 sampai 00:00:00 waktu setempat.
+  // Agregasi dilakukan di JavaScript dari timestamp UTC. Ini menghindari
+  // perbedaan perilaku DATE/INTERVAL antara versi MySQL dan MariaDB yang dapat
+  // membuat seluruh laporan gagal lalu tampil sebagai angka nol.
   const offsetMenit = Number(process.env["RADIUS_TZ_OFFSET_MINUTES"] ?? 420);
-  const lokal = (col: string) => `(${col} + INTERVAL ${offsetMenit} MINUTE)`;
-  const hariIni = lokal("NOW()");
-  // Login pertama diambil langsung dari radacct bila belum sempat dicatat,
-  // supaya voucher yang baru login langsung masuk pendapatan.
-  const login =
-    "COALESCE(v.first_login, (SELECT MIN(a.acctstarttime) FROM radacct a WHERE a.username = v.username))";
-  // Voucher PAID: dihitung sejak dibuat. Voucher UNPAID: baru dihitung
-  // setelah dipakai (login pertama di MikroTik).
-  const jual = `CASE WHEN v.paid = 1 THEN v.created_at ELSE ${login} END`;
-  // Pendapatan dihitung HANYA dari HARGA MODAL paket (cost_price).
-  // Paket tanpa harga modal dihitung 0, tidak memakai harga jual.
-  const harga = "COALESCE(p.cost_price, 0)";
-  const bayar = `(v.paid = 1 OR ${login} IS NOT NULL)`;
-  const tgl = lokal(`(${jual})`);
-  const daily = await query<{ date: string; total: number; count: number }>(
-    `SELECT DATE(${tgl}) AS date, SUM(${harga}) AS total, COUNT(*) AS count
-       FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan
-      WHERE ${bayar} GROUP BY DATE(${tgl}) ORDER BY date DESC LIMIT 30`,
+  const rows = await query<{
+    paid: number;
+    cost_price: number;
+    created_at: string;
+    first_login: string | null;
+  }>(
+    `SELECT v.paid, COALESCE(p.cost_price, 0) AS cost_price,
+            ${utc("v.created_at")} AS created_at,
+            ${utc("COALESCE(v.first_login, (SELECT MIN(a.acctstarttime) FROM radacct a WHERE a.username = v.username))")} AS first_login
+       FROM billing_voucher v
+       LEFT JOIN billing_plan p ON p.name = v.plan`,
   );
-  const monthly = await query<{ month: string; total: number; count: number }>(
-    `SELECT DATE_FORMAT(${tgl}, '%Y-%m') AS month, SUM(${harga}) AS total, COUNT(*) AS count
-       FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan
-      WHERE ${bayar} GROUP BY DATE_FORMAT(${tgl}, '%Y-%m') ORDER BY month DESC LIMIT 12`,
-  );
-  const agg = await query<{ total: number; users: number; used: number }>(
-    `SELECT COALESCE(SUM(CASE WHEN ${bayar} THEN ${harga} END),0) AS total, COUNT(*) AS users,
-            COALESCE(SUM(${login} IS NOT NULL),0) AS used
-       FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan`,
-  );
-  // Kartu "hari ini"/"bulan ini" dihitung dari hasil agregat harian & bulanan
-  // di atas, memakai kunci tanggal lokal dari MySQL. Dengan begitu angka kartu
-  // selalu sama dengan tabel rincian (tidak pernah beda karena zona waktu).
-  const kunci = await query<{ hari: string; bulan: string }>(
-    `SELECT DATE(${hariIni}) AS hari, DATE_FORMAT(${hariIni}, '%Y-%m') AS bulan`,
-  );
-  const hariKey = String(kunci[0]?.hari ?? "");
-  const bulanKey = String(kunci[0]?.bulan ?? "");
+
+  const localDateKey = (iso: string) => {
+    const time = new Date(iso).getTime();
+    if (Number.isNaN(time)) return "";
+    return new Date(time + offsetMenit * 60_000).toISOString().slice(0, 10);
+  };
+  const nowKey = localDateKey(new Date().toISOString());
+  const monthKey = nowKey.slice(0, 7);
+  const dailyMap = new Map<string, { total: number; count: number }>();
+  const monthlyMap = new Map<string, { total: number; count: number }>();
+  let totalRevenue = 0;
+  let used = 0;
+
+  for (const row of rows) {
+    if (row.first_login) used += 1;
+    const saleTime = Number(row.paid) === 1 ? row.created_at : row.first_login;
+    if (!saleTime) continue;
+    const date = localDateKey(saleTime);
+    if (!date) continue;
+    const amount = Number(row.cost_price) || 0;
+    const day = dailyMap.get(date) ?? { total: 0, count: 0 };
+    dailyMap.set(date, { total: day.total + amount, count: day.count + 1 });
+    const month = date.slice(0, 7);
+    const monthlyValue = monthlyMap.get(month) ?? { total: 0, count: 0 };
+    monthlyMap.set(month, {
+      total: monthlyValue.total + amount,
+      count: monthlyValue.count + 1,
+    });
+    totalRevenue += amount;
+  }
+
+  const dailyRows = [...dailyMap.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 30)
+    .map(([date, value]) => ({ date, ...value }));
+  const monthlyRows = [...monthlyMap.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 12)
+    .map(([month, value]) => ({ month, ...value }));
 
   const on = await query<{ n: number }>(
     `SELECT COUNT(*) AS n FROM radacct WHERE acctstoptime IS NULL
        AND COALESCE(acctupdatetime, acctstarttime) > NOW() - INTERVAL 10 MINUTE`,
   );
-  const dailyRows = daily.map((d) => ({
-    date: String(d.date).slice(0, 10),
-    total: Number(d.total),
-    count: Number(d.count),
-  }));
-  const monthlyRows = monthly.map((m) => ({
-    month: String(m.month),
-    total: Number(m.total),
-    count: Number(m.count),
-  }));
-  const hariRow = dailyRows.find((d) => d.date === hariKey);
-  const bulanRow = monthlyRows.find((m) => m.month === bulanKey);
+  const hariRow = dailyRows.find((d) => d.date === nowKey);
+  const bulanRow = monthlyRows.find((m) => m.month === monthKey);
 
   return {
     daily: [...dailyRows].reverse(),
@@ -367,9 +371,9 @@ export async function report(): Promise<RadiusReport> {
     todayCount: hariRow?.count ?? 0,
     monthRevenue: bulanRow?.total ?? 0,
     monthCount: bulanRow?.count ?? 0,
-    totalRevenue: Number(agg[0]?.total ?? 0),
-    totalUsers: Number(agg[0]?.users ?? 0),
-    used: Number(agg[0]?.used ?? 0),
+    totalRevenue,
+    totalUsers: rows.length,
+    used,
     online: Number(on[0]?.n ?? 0),
   };
 }
