@@ -370,6 +370,15 @@ function VoucherPage() {
                     {
                       onSuccess: (r) => {
                         toast.success(`${(r as { created: number }).created} voucher dibuat`);
+                        void syncKeRouter(
+                          list.map((u) => ({
+                            username: u.username,
+                            password: u.password,
+                            plan: u.plan,
+                            batch: u.batch,
+                            service: u.service,
+                          })),
+                        );
                         bukaCetak(
                           list.map((u) => ({
                             username: u.username,
@@ -491,6 +500,15 @@ function VoucherPage() {
                     {
                       onSuccess: () => {
                         toast.success(`User ${mUser.trim()} dibuat`);
+                        void syncKeRouter([
+                          {
+                            username: mUser.trim(),
+                            password: mPass.trim(),
+                            plan: p.name,
+                            batch: "manual",
+                            service: p.service,
+                          },
+                        ]);
                         setMUser("");
                         setMPass("");
                       },
