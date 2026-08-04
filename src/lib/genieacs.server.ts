@@ -354,7 +354,23 @@ export async function setAcsWifi(
 }
 
 export async function refreshAcsDevice(creds: AcsCreds, deviceId: string) {
-  await postTask(creds, deviceId, { name: "refreshObject", objectName: "" });
+  // Refresh seluruh pohon + subtree penting (SSID/VLAN sering belum ter-fetch
+  // kalau hanya mengandalkan refresh root pada beberapa ONU)
+  const subtrees = [
+    "",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice",
+    "InternetGatewayDevice.LANDevice.1.Hosts",
+    "Device.WiFi",
+    "Device.IP.Interface",
+  ];
+  for (const objectName of subtrees) {
+    try {
+      await postTask(creds, deviceId, { name: "refreshObject", objectName });
+    } catch {
+      // objek tidak ada pada model perangkat ini — lanjutkan
+    }
+  }
   return { ok: true as const };
 }
 
