@@ -369,6 +369,93 @@ function PengaturanPage() {
           )}
         </div>
 
+        <div className="panel p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <Receipt className="size-4 text-primary" /> Tagihan Otomatis (Paket 30 Hari)
+              </h2>
+              <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                Setiap user hotspot maupun PPPoE dengan paket masa aktif 30 hari akan otomatis
+                ditagih sehari sebelum masa aktifnya habis. Pelanggan melihat tagihan dan QRIS
+                pembayaran di halaman publik <span className="mono-num text-foreground">/portal</span>
+                .
+              </p>
+            </div>
+            <Switch
+              checked={inv.enabled}
+              onCheckedChange={(v) =>
+                void saveInvoice(
+                  { ...inv, enabled: v },
+                  v ? "Tagihan otomatis aktif" : "Tagihan otomatis nonaktif",
+                )
+              }
+              aria-label="Aktifkan tagihan otomatis"
+            />
+          </div>
+
+          {inv.enabled && (
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="lead">Dibuat berapa hari sebelum expired</Label>
+                <Input
+                  id="lead"
+                  inputMode="numeric"
+                  value={String(inv.leadDays)}
+                  onChange={(e) =>
+                    setInv({
+                      ...inv,
+                      leadDays: Math.min(30, Math.max(1, Number(e.target.value) || 1)),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">1 = H-1 (sehari sebelum expired).</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="merchant">Nama Usaha / Merchant</Label>
+                <Input
+                  id="merchant"
+                  value={inv.merchant}
+                  onChange={(e) => setInv({ ...inv, merchant: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="qris">URL Gambar QRIS Statis</Label>
+                <Input
+                  id="qris"
+                  placeholder="https://domain.com/qris.png"
+                  value={inv.qrisUrl}
+                  onChange={(e) => setInv({ ...inv, qrisUrl: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wa">WhatsApp Konfirmasi</Label>
+                <Input
+                  id="wa"
+                  placeholder="6281234567890"
+                  value={inv.whatsapp}
+                  onChange={(e) => setInv({ ...inv, whatsapp: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="payinfo">Petunjuk Pembayaran</Label>
+                <Textarea
+                  id="payinfo"
+                  rows={3}
+                  placeholder={"Transfer BRI 1234567890 a/n Najwa\nDANA/OVO 0812xxxx"}
+                  value={inv.payInfo}
+                  onChange={(e) => setInv({ ...inv, payInfo: e.target.value })}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button onClick={() => void saveInvoice(inv, "Pengaturan tagihan disimpan")}>
+                  <Save className="size-4" /> Simpan Pengaturan Tagihan
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="lg:col-span-2">
           <NasManager />
         </div>
