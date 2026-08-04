@@ -51,16 +51,44 @@ GENIEACS_UI_ACCESS_LOG_FILE=/var/log/genieacs/genieacs-ui-access.log
 GENIEACS_DEBUG_FILE=/var/log/genieacs/genieacs-debug.yaml
 GENIEACS_EXT_DIR=/opt/genieacs/ext
 GENIEACS_UI_JWT_SECRET=${JWT}
+GENIEACS_MONGODB_CONNECTION_URL=mongodb://127.0.0.1/genieacs
 GENIEACS_NBI_INTERFACE=0.0.0.0
+GENIEACS_NBI_PORT=7557
 GENIEACS_CWMP_INTERFACE=0.0.0.0
+GENIEACS_CWMP_PORT=7547
 GENIEACS_FS_INTERFACE=0.0.0.0
+GENIEACS_FS_PORT=7567
 GENIEACS_UI_INTERFACE=0.0.0.0
+GENIEACS_UI_PORT=3001
 EOF
   chown genieacs:genieacs /opt/genieacs/genieacs.env
   chmod 600 /opt/genieacs/genieacs.env
 fi
 
+# Perbarui instalasi lama juga, tanpa mengganti JWT yang sudah ada.
+set_env() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" /opt/genieacs/genieacs.env; then
+    sed -i "s|^${key}=.*|${key}=${value}|" /opt/genieacs/genieacs.env
+  else
+    printf '%s=%s\n' "$key" "$value" >> /opt/genieacs/genieacs.env
+  fi
+}
+set_env GENIEACS_MONGODB_CONNECTION_URL mongodb://127.0.0.1/genieacs
+set_env GENIEACS_NBI_INTERFACE 0.0.0.0
+set_env GENIEACS_NBI_PORT 7557
+set_env GENIEACS_CWMP_INTERFACE 0.0.0.0
+set_env GENIEACS_CWMP_PORT 7547
+set_env GENIEACS_FS_INTERFACE 0.0.0.0
+set_env GENIEACS_FS_PORT 7567
+set_env GENIEACS_UI_INTERFACE 0.0.0.0
+set_env GENIEACS_UI_PORT 3001
+chown genieacs:genieacs /opt/genieacs/genieacs.env
+chmod 600 /opt/genieacs/genieacs.env
+
 echo "==> 5/6 Buat service systemd"
+GENIEACS_BIN=$(command -v genieacs-nbi)
+GENIEACS_BIN_DIR=$(dirname "$GENIEACS_BIN")
 for svc in cwmp nbi fs ui; do
   cat > /etc/systemd/system/genieacs-${svc}.service <<EOF
 [Unit]
@@ -70,14 +98,17 @@ After=network.target mongod.service
 [Service]
 User=genieacs
 EnvironmentFile=/opt/genieacs/genieacs.env
-ExecStart=/usr/bin/env genieacs-${svc}
+Environment=PATH=${GENIEACS_BIN_DIR}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${GENIEACS_BIN_DIR}/genieacs-${svc}
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
 done
 systemctl daemon-reload
+systemctl reset-failed genieacs-cwmp genieacs-nbi genieacs-fs genieacs-ui 2>/dev/null || true
 systemctl enable --now genieacs-cwmp genieacs-nbi genieacs-fs genieacs-ui
 
 echo "==> 6/6 Buka firewall & verifikasi"
@@ -86,14 +117,25 @@ ufw allow 7557/tcp >/dev/null 2>&1 || true   # NBI API (panel billing)
 ufw allow 7567/tcp >/dev/null 2>&1 || true   # File server
 ufw allow 3000/tcp >/dev/null 2>&1 || true   # GenieACS UI
 
-sleep 4
+for _ in {1..20}; do
+  if curl -sf "http://127.0.0.1:7557/devices/?limit=1" >/dev/null; then
+    break
+  fi
+  sleep 1
+done
 IP=$(hostname -I | awk '{print $1}')
 echo
 echo "--- Status service ---"
 systemctl is-active genieacs-cwmp genieacs-nbi genieacs-fs genieacs-ui || true
 echo
 echo "--- Tes NBI API ---"
-curl -sf "http://127.0.0.1:7557/devices/?limit=1" && echo || echo "NBI belum merespons, cek: journalctl -u genieacs-nbi -n 50"
+if curl -sf "http://127.0.0.1:7557/devices/?limit=1"; then
+  echo
+else
+  echo "NBI gagal berjalan. Log terakhir:"
+  journalctl -u genieacs-nbi -n 30 --no-pager || true
+  exit 1
+fi
 echo
 echo "==================== SELESAI ===================="
 echo "Isi di menu TR-069 panel billing:"
@@ -104,5 +146,5 @@ echo
 echo "Setelan di ONU / MikroTik (TR-069 client):"
 echo "  ACS URL  : http://${IP}:7547"
 echo
-echo "GenieACS UI: http://${IP}:3000"
+echo "GenieACS UI: http://${IP}:3001"
 echo "================================================"
