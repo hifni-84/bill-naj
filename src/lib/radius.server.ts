@@ -334,29 +334,39 @@ export async function report(): Promise<RadiusReport> {
             COALESCE(SUM(${login} IS NOT NULL),0) AS used
        FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan`,
   );
-  const now = await query<{ dTotal: number; dCount: number; mTotal: number; mCount: number }>(
-    `SELECT COALESCE(SUM(CASE WHEN ${bayar} AND DATE(${tgl}) = DATE(${hariIni}) THEN ${harga} END),0) AS dTotal,
-            COALESCE(SUM(${bayar} AND DATE(${tgl}) = DATE(${hariIni})),0) AS dCount,
-            COALESCE(SUM(CASE WHEN ${bayar} AND DATE_FORMAT(${tgl},'%Y-%m') = DATE_FORMAT(${hariIni},'%Y-%m') THEN ${harga} END),0) AS mTotal,
-            COALESCE(SUM(${bayar} AND DATE_FORMAT(${tgl},'%Y-%m') = DATE_FORMAT(${hariIni},'%Y-%m')),0) AS mCount
-       FROM billing_voucher v LEFT JOIN billing_plan p ON p.name = v.plan`,
+  // Kartu "hari ini"/"bulan ini" dihitung dari hasil agregat harian & bulanan
+  // di atas, memakai kunci tanggal lokal dari MySQL. Dengan begitu angka kartu
+  // selalu sama dengan tabel rincian (tidak pernah beda karena zona waktu).
+  const kunci = await query<{ hari: string; bulan: string }>(
+    `SELECT DATE(${hariIni}) AS hari, DATE_FORMAT(${hariIni}, '%Y-%m') AS bulan`,
   );
+  const hariKey = String(kunci[0]?.hari ?? "");
+  const bulanKey = String(kunci[0]?.bulan ?? "");
 
   const on = await query<{ n: number }>(
     `SELECT COUNT(*) AS n FROM radacct WHERE acctstoptime IS NULL
        AND COALESCE(acctupdatetime, acctstarttime) > NOW() - INTERVAL 10 MINUTE`,
   );
+  const dailyRows = daily.map((d) => ({
+    date: String(d.date).slice(0, 10),
+    total: Number(d.total),
+    count: Number(d.count),
+  }));
+  const monthlyRows = monthly.map((m) => ({
+    month: String(m.month),
+    total: Number(m.total),
+    count: Number(m.count),
+  }));
+  const hariRow = dailyRows.find((d) => d.date === hariKey);
+  const bulanRow = monthlyRows.find((m) => m.month === bulanKey);
+
   return {
-    daily: daily
-      .map((d) => ({ date: d.date, total: Number(d.total), count: Number(d.count) }))
-      .reverse(),
-    monthly: monthly
-      .map((m) => ({ month: m.month, total: Number(m.total), count: Number(m.count) }))
-      .reverse(),
-    todayRevenue: Number(now[0]?.dTotal ?? 0),
-    todayCount: Number(now[0]?.dCount ?? 0),
-    monthRevenue: Number(now[0]?.mTotal ?? 0),
-    monthCount: Number(now[0]?.mCount ?? 0),
+    daily: [...dailyRows].reverse(),
+    monthly: [...monthlyRows].reverse(),
+    todayRevenue: hariRow?.total ?? 0,
+    todayCount: hariRow?.count ?? 0,
+    monthRevenue: bulanRow?.total ?? 0,
+    monthCount: bulanRow?.count ?? 0,
     totalRevenue: Number(agg[0]?.total ?? 0),
     totalUsers: Number(agg[0]?.users ?? 0),
     used: Number(agg[0]?.used ?? 0),
