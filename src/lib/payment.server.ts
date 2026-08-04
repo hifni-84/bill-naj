@@ -71,7 +71,20 @@ export async function createPayment(invoiceId: number) {
   return { url, ref, provider: opt.provider, reused: false as const };
 }
 
-async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, inv: InvRow) {
+type Item = { plan: string; username: string };
+
+/** Buat link checkout gateway untuk referensi apa pun (tagihan atau pesanan voucher). */
+export async function checkoutUrl(ref: string, amount: number, item: Item) {
+  const opt = await gatewayOptions();
+  if (opt.provider === "none") throw new Error("Payment gateway belum diaktifkan");
+  const url =
+    opt.provider === "midtrans"
+      ? await midtransSnap(opt, ref, amount, item)
+      : await tripayTransaction(opt, ref, amount, item);
+  return { url, provider: opt.provider };
+}
+
+async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, inv: Item) {
   if (!opt.midtransServerKey) throw new Error("Server Key Midtrans belum diisi");
   const host = opt.sandbox ? "https://app.sandbox.midtrans.com" : "https://app.midtrans.com";
   const res = await fetch(`${host}/snap/v1/transactions`, {
@@ -98,7 +111,7 @@ async function midtransSnap(opt: GatewayOptions, ref: string, amount: number, in
   return json.redirect_url;
 }
 
-async function tripayTransaction(opt: GatewayOptions, ref: string, amount: number, inv: InvRow) {
+async function tripayTransaction(opt: GatewayOptions, ref: string, amount: number, inv: Item) {
   if (!opt.tripayApiKey || !opt.tripayPrivateKey || !opt.tripayMerchantCode) {
     throw new Error("API Key / Private Key / Merchant Code Tripay belum lengkap");
   }
