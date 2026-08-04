@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, CreditCard, Save, Wifi, Layers, Receipt } from "lucide-react";
+import { CheckCircle2, CreditCard, Globe, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -139,6 +139,11 @@ function PengaturanPage() {
   }, []);
 
   const savePublic = async () => {
+    const host = pub.host.trim();
+    if (!host) {
+      toast.error("IP publik atau DDNS tidak boleh kosong");
+      return;
+    }
     const res = await settingsSave({
       data: {
         entries: {
