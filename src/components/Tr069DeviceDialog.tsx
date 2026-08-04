@@ -141,13 +141,6 @@ export function Tr069DeviceDialog({ device, defaultTab = "info", onClose, onChan
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const paramListUnused = useMemo(() => {
-    const q = cariParam.trim().toLowerCase();
-    const all = params.data?.params ?? [];
-    const f = q ? all.filter((p) => p.path.toLowerCase().includes(q)) : all;
-    return f.slice(0, 2000);
-  }, [params.data, cariParam]);
-
   function wanParents(d: AcsDevice) {
     const set = new Map<string, string>();
     for (const x of d.wans) set.set(x.parentPath, x.kind);
