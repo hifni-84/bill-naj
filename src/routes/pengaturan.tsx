@@ -73,6 +73,7 @@ function PengaturanPage() {
   const [opts, setOpts] = useState<AppOptions>(defaultOptions);
   const [hybrid, setHybrid] = useState<HybridOptions>(defaultHybrid);
   const [inv, setInv] = useState<InvoiceOptions>(defaultInvoiceOptions);
+  const [gw, setGw] = useState<GatewayOptions>(defaultGatewayOptions);
 
   useEffect(() => {
     setForm(readCreds());
@@ -116,9 +117,15 @@ function PengaturanPage() {
   };
 
   const saveHybrid = (next: HybridOptions) => {
-*** unchanged
     setHybrid(next);
     writeHybrid(next);
+  };
+
+  const saveGateway = async (next: GatewayOptions, pesan?: string) => {
+    setGw(next);
+    const res = await gatewayOptionsSave({ data: { options: next } });
+    if (!res.ok) toast.error("Pengaturan payment gateway gagal disimpan");
+    else if (pesan) toast.success(pesan);
   };
 
   const patchAccount = (role: BillingRole, patch: Partial<AccountForm>) =>
