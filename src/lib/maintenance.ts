@@ -108,7 +108,7 @@ export async function runMaintenance(
   return result;
 }
 
-/** Jalankan pemeriksaan expired & isolir tiap 5 menit. */
+/** Jalankan pemeriksaan expired & isolir tiap 1 menit. */
 export function useMaintenance(creds: MtCreds, enabled: boolean, hapusExpired = true) {
   const qc = useQueryClient();
 
@@ -126,7 +126,7 @@ export function useMaintenance(creds: MtCreds, enabled: boolean, hapusExpired = 
           qc.invalidateQueries({ queryKey: ["active"] });
         }
       } catch {
-        /* diam saja, dicoba lagi 5 menit berikutnya */
+        /* diam saja, dicoba lagi 1 menit berikutnya */
       }
     };
 
