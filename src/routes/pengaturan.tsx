@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Save, Wifi, Layers, Receipt } from "lucide-react";
+import { CheckCircle2, CreditCard, Save, Wifi, Layers, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
@@ -25,6 +25,12 @@ import {
 import { billingAccountGet, billingAccountSave } from "@/lib/radius.functions";
 import { invoiceOptionsGet, invoiceOptionsSave } from "@/lib/invoice.functions";
 import { defaultInvoiceOptions, type InvoiceOptions } from "@/lib/invoice-types";
+import { gatewayOptionsGet, gatewayOptionsSave } from "@/lib/payment.functions";
+import {
+  defaultGatewayOptions,
+  type GatewayOptions,
+  type GatewayProvider,
+} from "@/lib/invoice-types";
 import {
   defaultHybrid,
   readHybrid,
@@ -97,6 +103,9 @@ function PengaturanPage() {
     void invoiceOptionsGet()
       .then((r) => setInv(r.options))
       .catch(() => undefined);
+    void gatewayOptionsGet()
+      .then((r) => setGw(r.options))
+      .catch(() => undefined);
   }, []);
 
   const saveInvoice = async (next: InvoiceOptions, pesan?: string) => {
@@ -107,6 +116,7 @@ function PengaturanPage() {
   };
 
   const saveHybrid = (next: HybridOptions) => {
+*** unchanged
     setHybrid(next);
     writeHybrid(next);
   };
