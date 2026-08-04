@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -72,6 +73,7 @@ function PaketPage() {
   const [pUnit, setPUnit] = useState<"menit" | "jam" | "hari" | "bulan">("hari");
   const [pShared, setPShared] = useState("1");
   const [pService, setPService] = useState<"hotspot" | "pppoe">("hotspot");
+  const [pIntegrate, setPIntegrate] = useState(true);
 
   return (
     <>
@@ -163,6 +165,20 @@ function PaketPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2 md:col-span-3 xl:col-span-6">
+              <Label htmlFor="p-int">Integrasi MikroTik</Label>
+              <div className="flex items-center gap-3 rounded-md border border-border/60 px-3 py-2">
+                <Switch id="p-int" checked={pIntegrate} onCheckedChange={setPIntegrate} />
+                <span className="text-xs text-muted-foreground">
+                  {pIntegrate
+                    ? "Paket juga dibuat sebagai profile di router MikroTik saat disimpan."
+                    : "Paket hanya disimpan di RADIUS, tidak dikirim ke router."}
+                  {pIntegrate && !hybrid.enabled
+                    ? " (Mode hybrid belum aktif di Pengaturan — profile dikirim tetap saat disimpan.)"
+                    : ""}
+                </span>
+              </div>
+            </div>
             <div className="flex items-end xl:col-span-6">
               <Button
                 disabled={!pName.trim() || savePlan.isPending}
@@ -189,7 +205,7 @@ function PaketPage() {
                     onSuccess: () => {
                       toast.success("Paket disimpan");
                       setPName("");
-                      void syncPlan(plan);
+                      if (pIntegrate) void syncPlan(plan);
                     },
                     onError: (e: Error) => toast.error(e.message),
                   });
