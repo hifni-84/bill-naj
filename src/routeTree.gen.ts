@@ -10,33 +10,167 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LaporanRouteImport } from './routes/laporan'
+import { Route as PaketRouteImport } from './routes/paket'
+import { Route as PendapatanRouteImport } from './routes/pendapatan'
+import { Route as PengaturanRouteImport } from './routes/pengaturan'
+import { Route as RadiusRouteImport } from './routes/radius'
+import { Route as SesiAktifRouteImport } from './routes/sesi-aktif'
+import { Route as TemplateRouteImport } from './routes/template'
+import { Route as Tr069RouteImport } from './routes/tr069'
+import { Route as UserAktifRouteImport } from './routes/user-aktif'
+import { Route as VoucherRouteImport } from './routes/voucher'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LaporanRoute = LaporanRouteImport.update({
+  id: '/laporan',
+  path: '/laporan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaketRoute = PaketRouteImport.update({
+  id: '/paket',
+  path: '/paket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PendapatanRoute = PendapatanRouteImport.update({
+  id: '/pendapatan',
+  path: '/pendapatan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengaturanRoute = PengaturanRouteImport.update({
+  id: '/pengaturan',
+  path: '/pengaturan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RadiusRoute = RadiusRouteImport.update({
+  id: '/radius',
+  path: '/radius',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SesiAktifRoute = SesiAktifRouteImport.update({
+  id: '/sesi-aktif',
+  path: '/sesi-aktif',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplateRoute = TemplateRouteImport.update({
+  id: '/template',
+  path: '/template',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Tr069Route = Tr069RouteImport.update({
+  id: '/tr069',
+  path: '/tr069',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserAktifRoute = UserAktifRouteImport.update({
+  id: '/user-aktif',
+  path: '/user-aktif',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VoucherRoute = VoucherRouteImport.update({
+  id: '/voucher',
+  path: '/voucher',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/laporan': typeof LaporanRoute
+  '/paket': typeof PaketRoute
+  '/pendapatan': typeof PendapatanRoute
+  '/pengaturan': typeof PengaturanRoute
+  '/radius': typeof RadiusRoute
+  '/sesi-aktif': typeof SesiAktifRoute
+  '/template': typeof TemplateRoute
+  '/tr069': typeof Tr069Route
+  '/user-aktif': typeof UserAktifRoute
+  '/voucher': typeof VoucherRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/laporan': typeof LaporanRoute
+  '/paket': typeof PaketRoute
+  '/pendapatan': typeof PendapatanRoute
+  '/pengaturan': typeof PengaturanRoute
+  '/radius': typeof RadiusRoute
+  '/sesi-aktif': typeof SesiAktifRoute
+  '/template': typeof TemplateRoute
+  '/tr069': typeof Tr069Route
+  '/user-aktif': typeof UserAktifRoute
+  '/voucher': typeof VoucherRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/laporan': typeof LaporanRoute
+  '/paket': typeof PaketRoute
+  '/pendapatan': typeof PendapatanRoute
+  '/pengaturan': typeof PengaturanRoute
+  '/radius': typeof RadiusRoute
+  '/sesi-aktif': typeof SesiAktifRoute
+  '/template': typeof TemplateRoute
+  '/tr069': typeof Tr069Route
+  '/user-aktif': typeof UserAktifRoute
+  '/voucher': typeof VoucherRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/laporan'
+    | '/paket'
+    | '/pendapatan'
+    | '/pengaturan'
+    | '/radius'
+    | '/sesi-aktif'
+    | '/template'
+    | '/tr069'
+    | '/user-aktif'
+    | '/voucher'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/laporan'
+    | '/paket'
+    | '/pendapatan'
+    | '/pengaturan'
+    | '/radius'
+    | '/sesi-aktif'
+    | '/template'
+    | '/tr069'
+    | '/user-aktif'
+    | '/voucher'
+  id:
+    | '__root__'
+    | '/'
+    | '/laporan'
+    | '/paket'
+    | '/pendapatan'
+    | '/pengaturan'
+    | '/radius'
+    | '/sesi-aktif'
+    | '/template'
+    | '/tr069'
+    | '/user-aktif'
+    | '/voucher'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LaporanRoute: typeof LaporanRoute
+  PaketRoute: typeof PaketRoute
+  PendapatanRoute: typeof PendapatanRoute
+  PengaturanRoute: typeof PengaturanRoute
+  RadiusRoute: typeof RadiusRoute
+  SesiAktifRoute: typeof SesiAktifRoute
+  TemplateRoute: typeof TemplateRoute
+  Tr069Route: typeof Tr069Route
+  UserAktifRoute: typeof UserAktifRoute
+  VoucherRoute: typeof VoucherRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +182,92 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/laporan': {
+      id: '/laporan'
+      path: '/laporan'
+      fullPath: '/laporan'
+      preLoaderRoute: typeof LaporanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paket': {
+      id: '/paket'
+      path: '/paket'
+      fullPath: '/paket'
+      preLoaderRoute: typeof PaketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pendapatan': {
+      id: '/pendapatan'
+      path: '/pendapatan'
+      fullPath: '/pendapatan'
+      preLoaderRoute: typeof PendapatanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan': {
+      id: '/pengaturan'
+      path: '/pengaturan'
+      fullPath: '/pengaturan'
+      preLoaderRoute: typeof PengaturanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/radius': {
+      id: '/radius'
+      path: '/radius'
+      fullPath: '/radius'
+      preLoaderRoute: typeof RadiusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sesi-aktif': {
+      id: '/sesi-aktif'
+      path: '/sesi-aktif'
+      fullPath: '/sesi-aktif'
+      preLoaderRoute: typeof SesiAktifRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/template': {
+      id: '/template'
+      path: '/template'
+      fullPath: '/template'
+      preLoaderRoute: typeof TemplateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tr069': {
+      id: '/tr069'
+      path: '/tr069'
+      fullPath: '/tr069'
+      preLoaderRoute: typeof Tr069RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user-aktif': {
+      id: '/user-aktif'
+      path: '/user-aktif'
+      fullPath: '/user-aktif'
+      preLoaderRoute: typeof UserAktifRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/voucher': {
+      id: '/voucher'
+      path: '/voucher'
+      fullPath: '/voucher'
+      preLoaderRoute: typeof VoucherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LaporanRoute: LaporanRoute,
+  PaketRoute: PaketRoute,
+  PendapatanRoute: PendapatanRoute,
+  PengaturanRoute: PengaturanRoute,
+  RadiusRoute: RadiusRoute,
+  SesiAktifRoute: SesiAktifRoute,
+  TemplateRoute: TemplateRoute,
+  Tr069Route: Tr069Route,
+  UserAktifRoute: UserAktifRoute,
+  VoucherRoute: VoucherRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
