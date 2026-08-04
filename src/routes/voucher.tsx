@@ -140,6 +140,7 @@ function VoucherPage() {
   const [vChar, setVChar] = useState("campur");
   const [vNas, setVNas] = useState("semua");
   const [vMode, setVMode] = useState<"sama" | "beda">("sama");
+  const [vPhone, setVPhone] = useState("");
 
   // form tambah user manual
   const [mUser, setMUser] = useState("");
@@ -148,6 +149,13 @@ function VoucherPage() {
   const [mNas, setMNas] = useState("semua");
   const [mPaid, setMPaid] = useState<"paid" | "unpaid">("paid");
   const [mService, setMService] = useState<"hotspot" | "pppoe">("hotspot");
+  const [mPhone, setMPhone] = useState("");
+
+  /** Paket bulanan (masa aktif >= 30 hari) butuh nomor WhatsApp untuk kirim tagihan. */
+  const bulanan = (nama: string) => {
+    const p = (plans.data ?? []).find((x) => x.name === nama);
+    return (p?.validity_seconds ?? 0) >= 30 * 86400 - 3600;
+  };
 
   const [cari, setCari] = useState("");
   const [filter, setFilter] = useState("semua");
