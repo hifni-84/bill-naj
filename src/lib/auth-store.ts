@@ -9,7 +9,7 @@ const OPTS_KEY = "billing.options";
 const EVENT = "billing-auth-changed";
 
 export type Account = { username: string; password: string };
-export type BillingRole = "admin" | "reseller";
+export type BillingRole = "admin" | "reseller" | "demo";
 export type AppOptions = { autoDeleteExpired: boolean };
 
 export const defaultAccount: Account = { username: "admin", password: "admin" };
@@ -85,7 +85,13 @@ export function logout() {
 
 export function currentRole(): BillingRole {
   if (typeof window === "undefined") return "admin";
-  return window.localStorage.getItem(ROLE_KEY) === "reseller" ? "reseller" : "admin";
+  const raw = window.localStorage.getItem(ROLE_KEY);
+  return raw === "reseller" || raw === "demo" ? raw : "admin";
+}
+
+/** Akun demo hanya boleh melihat, tidak boleh mengubah data. */
+export function isReadOnly() {
+  return currentRole() === "demo";
 }
 
 /** Hook aman-hidrasi untuk status login. */
