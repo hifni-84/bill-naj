@@ -223,37 +223,56 @@ function PengaturanPage() {
 
         <div className="panel p-6">
           <h2 className="mb-4 text-sm font-semibold">Akun Login Billing</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="au">Username</Label>
-              <Input
-                id="au"
-                value={acc.username}
-                onChange={(e) => setAcc({ ...acc, username: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ap">Password Baru</Label>
-              <Input
-                id="ap"
-                type="password"
-                value={acc.password}
-                onChange={(e) => setAcc({ ...acc, password: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="ap2">Ulangi Password</Label>
-              <Input
-                id="ap2"
-                type="password"
-                value={pass2}
-                onChange={(e) => setPass2(e.target.value)}
-              />
-            </div>
+          <div className="grid gap-6">
+            {(["admin", "reseller"] as BillingRole[]).map((role) => {
+              const acc = accounts[role];
+              return (
+                <div key={role} className="border-t border-border pt-5 first:border-0 first:pt-0">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Akun {roleLabels[role]}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {acc.configured
+                        ? "Password tersimpan"
+                        : role === "admin"
+                          ? "Default: admin / admin"
+                          : "Belum diatur"}
+                    </span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${role}-u`}>Username</Label>
+                      <Input
+                        id={`${role}-u`}
+                        value={acc.username}
+                        onChange={(e) => patchAccount(role, { username: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${role}-p`}>Password Baru</Label>
+                      <Input
+                        id={`${role}-p`}
+                        type="password"
+                        value={acc.password}
+                        onChange={(e) => patchAccount(role, { password: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:col-span-2">
+                      <Label htmlFor={`${role}-p2`}>Ulangi Password</Label>
+                      <Input
+                        id={`${role}-p2`}
+                        type="password"
+                        value={acc.confirm}
+                        onChange={(e) => patchAccount(role, { confirm: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <Button className="mt-4" onClick={() => void saveAccount(role)}>
+                    <Save className="size-4" /> Simpan Akun {roleLabels[role]}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
-          <Button className="mt-5" onClick={() => void saveAccount()}>
-            <Save className="size-4" /> Simpan Akun
-          </Button>
 
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-border pt-5">
             <div>
