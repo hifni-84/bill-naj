@@ -230,6 +230,50 @@ function PengaturanPage() {
     else toast.error(res.error ?? "Uji kirim gagal");
   };
 
+  // ----- Self-hosted (QR scan) helpers -----
+  const refreshSelf = async () => {
+    const r = await waSelfStatus();
+    if (r.ok) {
+      setWaSelfState(r.status.state);
+      setWaSelfUser(r.status.user);
+    } else {
+      setWaSelfState("offline");
+    }
+  };
+
+  const showQr = async () => {
+    setWaQrBusy(true);
+    const r = await waSelfQr();
+    setWaQrBusy(false);
+    if (r.ok && r.qr) {
+      setWaQr(r.qr);
+      void refreshSelf();
+    } else {
+      toast.error(r.error ?? "QR belum tersedia. Pastikan layanan wa-gateway berjalan.");
+    }
+  };
+
+  const logoutSelf = async () => {
+    setWaQrBusy(true);
+    const r = await waSelfLogout();
+    setWaQrBusy(false);
+    if (r.ok) {
+      toast.success("Sesi dihapus. QR baru akan tersedia sebentar.");
+      setWaQr("");
+      void refreshSelf();
+    } else {
+      toast.error(r.error ?? "Logout gagal");
+    }
+  };
+
+  // Poll status koneksi saat provider = self
+  useEffect(() => {
+    if (wa.provider !== "self") return;
+    void refreshSelf();
+    const t = setInterval(refreshSelf, 5000);
+    return () => clearInterval(t);
+  }, [wa.provider]);
+
   const saveHybrid = (next: HybridOptions) => {
     setHybrid(next);
     writeHybrid(next);
