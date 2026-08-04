@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { radiusDeleteNas, radiusSaveNas } from "@/lib/radius.functions";
-import { useRadiusMutation, useRadiusNas } from "@/lib/radius-client";
+import { useRadiusMutation, useRadiusNas, useRadiusNasStatus } from "@/lib/radius-client";
 import { ZONA_WAKTU } from "@/lib/radius-types";
+
+function StatusBadge({
+  ok,
+  label,
+  title,
+}: {
+  ok: boolean;
+  label: string;
+  title?: string | undefined;
+}) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        ok ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+      }`}
+    >
+      {ok ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
+      {label}
+    </span>
+  );
+}
 
 export function NasManager() {
   const nas = useRadiusNas();
-  const saveNas = useRadiusMutation(
-    (n: Parameters<typeof radiusSaveNas>[0]["data"]) => radiusSaveNas({ data: n }),
+  const status = useRadiusNasStatus();
+  const statusOf = (nasname: string) => (status.data ?? []).find((s) => s.nasname === nasname);
+  const saveNas = useRadiusMutation((n: Parameters<typeof radiusSaveNas>[0]["data"]) =>
+    radiusSaveNas({ data: n }),
   );
   const delNas = useRadiusMutation((id: number) => radiusDeleteNas({ data: { id } }));
 
@@ -133,6 +157,12 @@ export function NasManager() {
       </div>
 
       <div className="panel overflow-x-auto">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <h3 className="text-sm font-semibold">Status Koneksi NAS</h3>
+          <Button variant="outline" size="sm" onClick={() => status.refetch()}>
+            <RefreshCw className={`size-4 ${status.isFetching ? "animate-spin" : ""}`} /> Periksa
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -141,51 +171,78 @@ export function NasManager() {
               <TableHead>Tipe</TableHead>
               <TableHead>Secret</TableHead>
               <TableHead>Zona Waktu</TableHead>
+              <TableHead>RADIUS</TableHead>
+              <TableHead>API Router</TableHead>
               <TableHead>Keterangan</TableHead>
               <TableHead className="w-24 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(nas.data ?? []).map((n) => (
-              <TableRow key={n.id}>
-                <TableCell className="mono-num font-medium">{n.nasname}</TableCell>
-                <TableCell>{n.shortname}</TableCell>
-                <TableCell className="text-xs uppercase">{n.type}</TableCell>
-                <TableCell className="mono-num text-xs">{n.secret}</TableCell>
-                <TableCell className="text-xs">{n.timezone || "Asia/Jakarta"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {n.description || "-"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Ubah NAS ${n.nasname}`}
-                    onClick={() => {
-                      setNId(n.id);
-                      setNIp(n.nasname);
-                      setNNama(n.shortname);
-                      setNSecret(n.secret);
-                      setNKet(n.description ?? "");
-                      setNTz(n.timezone || "Asia/Jakarta");
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Hapus NAS ${n.nasname}`}
-                    onClick={() => delNas.mutate(n.id)}
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {(nas.data ?? []).map((n) => {
+              const st = statusOf(n.nasname);
+              return (
+                <TableRow key={n.id}>
+                  <TableCell className="mono-num font-medium">{n.nasname}</TableCell>
+                  <TableCell>{n.shortname}</TableCell>
+                  <TableCell className="text-xs uppercase">{n.type}</TableCell>
+                  <TableCell className="mono-num text-xs">{n.secret}</TableCell>
+                  <TableCell className="text-xs">{n.timezone || "Asia/Jakarta"}</TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      ok={Boolean(st?.radius)}
+                      label={st?.radius ? "Terhubung" : "Tidak terhubung"}
+                      title={
+                        st?.radiusLast
+                          ? `Aktivitas terakhir: ${new Date(st.radiusLast).toLocaleString()} · ${st.radiusSessions} sesi aktif`
+                          : "Belum ada aktivitas RADIUS dari NAS ini"
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      ok={Boolean(st?.api)}
+                      label={
+                        st?.api
+                          ? `Terhubung${st.identity ? ` (${st.identity})` : ""}`
+                          : "Tidak terhubung"
+                      }
+                      title={st?.apiError ?? undefined}
+                    />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {n.description || "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Ubah NAS ${n.nasname}`}
+                      onClick={() => {
+                        setNId(n.id);
+                        setNIp(n.nasname);
+                        setNNama(n.shortname);
+                        setNSecret(n.secret);
+                        setNKet(n.description ?? "");
+                        setNTz(n.timezone || "Asia/Jakarta");
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Hapus NAS ${n.nasname}`}
+                      onClick={() => delNas.mutate(n.id)}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {(nas.data ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                   Belum ada NAS terdaftar.
                 </TableCell>
               </TableRow>
