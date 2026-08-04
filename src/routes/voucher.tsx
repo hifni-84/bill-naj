@@ -369,6 +369,21 @@ function VoucherPage() {
                 </SelectContent>
               </Select>
             </div>
+            {bulanan(vPlan) && (
+              <div className="flex min-w-0 flex-col gap-2">
+                <Label htmlFor="v-wa">No. WhatsApp Pelanggan</Label>
+                <Input
+                  id="v-wa"
+                  inputMode="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={vPhone}
+                  onChange={(e) => setVPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dipakai untuk kirim tagihan paket bulanan (H-1 sebelum expired).
+                </p>
+              </div>
+            )}
             <div className="col-span-full flex justify-end pt-1 md:col-span-3 xl:col-span-6">
               <Button
                 className="w-full sm:w-auto"
@@ -392,6 +407,7 @@ function VoucherPage() {
                       service: p.service,
                       paid: vPaid === "paid",
                       nas: vNas === "semua" ? "" : vNas,
+                      phone: bulanan(p.name) ? vPhone.trim() : "",
                     };
                   });
                   createUsers.mutate(
