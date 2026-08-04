@@ -28,6 +28,9 @@ fi
 apt-get install -y nginx
 
 # ---- 2. Build aplikasi ----
+# Pastikan APP_USER punya hak tulis ke folder aplikasi (mis. /opt hasil git
+# clone oleh root) supaya npm install tidak kena EACCES pada node_modules.
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 echo "==> Memasang dependensi & build (preset node-server)"
 echo "    Memakai 'npm install' agar lockfile lama/tidak sinkron diperbarui otomatis"
 sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && npm install --legacy-peer-deps && NITRO_PRESET=node-server npm run build"
