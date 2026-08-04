@@ -1,0 +1,19 @@
+[Unit]
+Description=Panel Billing MikroTik (TanStack Start)
+After=network.target
+
+[Service]
+Type=simple
+User=__APP_USER__
+WorkingDirectory=__APP_DIR__
+Environment=NODE_ENV=production
+Environment=PORT=__PORT__
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/node __APP_DIR__/.output/server/index.mjs
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
