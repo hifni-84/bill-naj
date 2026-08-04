@@ -14,8 +14,10 @@ import { Route as LaporanRouteImport } from './routes/laporan'
 import { Route as PaketRouteImport } from './routes/paket'
 import { Route as PendapatanRouteImport } from './routes/pendapatan'
 import { Route as PengaturanRouteImport } from './routes/pengaturan'
+import { Route as PortalRouteImport } from './routes/portal'
 import { Route as RadiusRouteImport } from './routes/radius'
 import { Route as SesiAktifRouteImport } from './routes/sesi-aktif'
+import { Route as TagihanRouteImport } from './routes/tagihan'
 import { Route as TemplateRouteImport } from './routes/template'
 import { Route as Tr069RouteImport } from './routes/tr069'
 import { Route as UserAktifRouteImport } from './routes/user-aktif'
@@ -46,6 +48,11 @@ const PengaturanRoute = PengaturanRouteImport.update({
   path: '/pengaturan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RadiusRoute = RadiusRouteImport.update({
   id: '/radius',
   path: '/radius',
@@ -54,6 +61,11 @@ const RadiusRoute = RadiusRouteImport.update({
 const SesiAktifRoute = SesiAktifRouteImport.update({
   id: '/sesi-aktif',
   path: '/sesi-aktif',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TagihanRoute = TagihanRouteImport.update({
+  id: '/tagihan',
+  path: '/tagihan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TemplateRoute = TemplateRouteImport.update({
@@ -83,8 +95,10 @@ export interface FileRoutesByFullPath {
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
+  '/portal': typeof PortalRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
+  '/tagihan': typeof TagihanRoute
   '/template': typeof TemplateRoute
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
@@ -96,8 +110,10 @@ export interface FileRoutesByTo {
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
+  '/portal': typeof PortalRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
+  '/tagihan': typeof TagihanRoute
   '/template': typeof TemplateRoute
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
@@ -110,8 +126,10 @@ export interface FileRoutesById {
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
+  '/portal': typeof PortalRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
+  '/tagihan': typeof TagihanRoute
   '/template': typeof TemplateRoute
   '/tr069': typeof Tr069Route
   '/user-aktif': typeof UserAktifRoute
@@ -125,8 +143,10 @@ export interface FileRouteTypes {
     | '/paket'
     | '/pendapatan'
     | '/pengaturan'
+    | '/portal'
     | '/radius'
     | '/sesi-aktif'
+    | '/tagihan'
     | '/template'
     | '/tr069'
     | '/user-aktif'
@@ -138,8 +158,10 @@ export interface FileRouteTypes {
     | '/paket'
     | '/pendapatan'
     | '/pengaturan'
+    | '/portal'
     | '/radius'
     | '/sesi-aktif'
+    | '/tagihan'
     | '/template'
     | '/tr069'
     | '/user-aktif'
@@ -151,8 +173,10 @@ export interface FileRouteTypes {
     | '/paket'
     | '/pendapatan'
     | '/pengaturan'
+    | '/portal'
     | '/radius'
     | '/sesi-aktif'
+    | '/tagihan'
     | '/template'
     | '/tr069'
     | '/user-aktif'
@@ -165,8 +189,10 @@ export interface RootRouteChildren {
   PaketRoute: typeof PaketRoute
   PendapatanRoute: typeof PendapatanRoute
   PengaturanRoute: typeof PengaturanRoute
+  PortalRoute: typeof PortalRoute
   RadiusRoute: typeof RadiusRoute
   SesiAktifRoute: typeof SesiAktifRoute
+  TagihanRoute: typeof TagihanRoute
   TemplateRoute: typeof TemplateRoute
   Tr069Route: typeof Tr069Route
   UserAktifRoute: typeof UserAktifRoute
@@ -210,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PengaturanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/radius': {
       id: '/radius'
       path: '/radius'
@@ -222,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/sesi-aktif'
       fullPath: '/sesi-aktif'
       preLoaderRoute: typeof SesiAktifRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tagihan': {
+      id: '/tagihan'
+      path: '/tagihan'
+      fullPath: '/tagihan'
+      preLoaderRoute: typeof TagihanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/template': {
@@ -261,8 +301,10 @@ const rootRouteChildren: RootRouteChildren = {
   PaketRoute: PaketRoute,
   PendapatanRoute: PendapatanRoute,
   PengaturanRoute: PengaturanRoute,
+  PortalRoute: PortalRoute,
   RadiusRoute: RadiusRoute,
   SesiAktifRoute: SesiAktifRoute,
+  TagihanRoute: TagihanRoute,
   TemplateRoute: TemplateRoute,
   Tr069Route: Tr069Route,
   UserAktifRoute: UserAktifRoute,
