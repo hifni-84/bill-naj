@@ -58,6 +58,7 @@ export const radiusCreateUsers = createServerFn({ method: "POST" })
         service: "hotspot" | "pppoe";
         paid?: boolean;
         nas?: string;
+        phone?: string;
       }[];
     }) => d,
   )
