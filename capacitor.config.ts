@@ -23,7 +23,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: "always",
-limitsNavigationsToAppBoundDomains: false,
+    limitsNavigationsToAppBoundDomains: false,
   },
   plugins: {
     SplashScreen: {
