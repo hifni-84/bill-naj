@@ -21,6 +21,8 @@ export type Order = {
   status: "pending" | "paid" | "cancelled";
   username: string;
   password: string;
+  qty: number;
+  vouchers: { username: string; password: string }[];
   pay_url: string;
   created_at: string;
   paid_at: string | null;
@@ -50,10 +52,21 @@ async function ensureTable() {
        KEY idx_status (status)
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   );
+  // Kolom jumlah voucher per pesanan (instalasi lama).
+  try {
+    await query("ALTER TABLE billing_order ADD COLUMN qty INT NOT NULL DEFAULT 1");
+  } catch {
+    /* kolom sudah ada */
+  }
+  try {
+    await query("ALTER TABLE billing_order ADD COLUMN vouchers TEXT NULL");
+  } catch {
+    /* kolom sudah ada */
+  }
   ready = true;
 }
 
-const SELECT = `SELECT id, code, plan, amount, status, username, password, pay_url,
+const SELECT = `SELECT id, code, plan, amount, status, username, password, qty, vouchers, pay_url,
         ${utc("created_at")} AS created_at, ${utc("paid_at")} AS paid_at
    FROM billing_order`;
 
