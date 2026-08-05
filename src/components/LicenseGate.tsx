@@ -242,6 +242,9 @@ export function LicenseGate({ children }: { children: ReactNode }) {
             ? "Masa aktif lisensi sudah habis. Masukkan kode aktivasi baru untuk melanjutkan."
             : "Kirim Software ID billing dan Software ID MikroTik ke penjual untuk memperoleh kode aktivasi."}
         </p>
+        <p className="mt-2 text-sm font-medium text-primary">
+          Silahkan hubungi No 085121063293 untuk mendapatkan licensi aktivasi
+        </p>
       </div>
       <ActivationPanel compact />
     </div>
