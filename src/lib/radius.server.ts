@@ -229,6 +229,34 @@ export async function createUsers(users: NewUser[]) {
   const { ensurePhoneColumn } = await import("./wa.server");
   const { normalizeWaNumber } = await import("./invoice-types");
   await ensurePhoneColumn();
+  // Kode voucher wajib unik: tolak yang sama dengan voucher tersimpan
+  // (termasuk yang sudah expired/terpakai) maupun duplikat di dalam batch.
+  const dalamBatch = new Set<string>();
+  const kembar: string[] = [];
+  for (const u of users) {
+    const nama = (u.username ?? "").trim();
+    if (!nama) throw new Error("Username voucher tidak boleh kosong");
+    if (dalamBatch.has(nama)) kembar.push(nama);
+    dalamBatch.add(nama);
+  }
+  const daftar = [...dalamBatch];
+  if (daftar.length) {
+    const marks = daftar.map(() => "?").join(",");
+    const ada = await query<{ username: string }>(
+      `SELECT username FROM billing_voucher WHERE username IN (${marks})
+       UNION SELECT username FROM radcheck WHERE username IN (${marks})`,
+      [...daftar, ...daftar],
+    );
+    for (const r of ada) kembar.push(r.username);
+  }
+  if (kembar.length) {
+    const unik = [...new Set(kembar)];
+    throw new Error(
+      `Kode voucher sudah ada di server (termasuk yang expired): ${unik.slice(0, 10).join(", ")}${
+        unik.length > 10 ? ` dan ${unik.length - 10} lainnya` : ""
+      }`,
+    );
+  }
   let created = 0;
   for (const u of users) {
     // Harga dan layanan harus mengikuti paket di database. Jangan bergantung
