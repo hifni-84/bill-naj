@@ -192,9 +192,10 @@ export async function settleOrder(id: number, label = "gateway") {
 /** Cek status pesanan (dipakai portal setelah kembali dari pembayaran). */
 export async function orderStatus(code: string) {
   await ensureTable();
-  const rows = await query<Order & { vouchers: unknown }>(`${SELECT} WHERE code = ? LIMIT 1`, [
-    code.trim(),
-  ]);
+  const rows = await query<Omit<Order, "vouchers"> & { vouchers: unknown }>(
+    `${SELECT} WHERE code = ? LIMIT 1`,
+    [code.trim()],
+  );
   const row = rows[0];
   if (!row) return null;
   let list: { username: string; password: string }[] = [];
