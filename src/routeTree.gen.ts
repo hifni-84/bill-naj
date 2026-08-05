@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AktivasiRouteImport } from './routes/aktivasi'
 import { Route as LaporanRouteImport } from './routes/laporan'
 import { Route as PaketRouteImport } from './routes/paket'
 import { Route as PendapatanRouteImport } from './routes/pendapatan'
@@ -29,6 +30,11 @@ import { Route as ApiPublicPayCallbackProviderRouteImport } from './routes/api/p
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AktivasiRoute = AktivasiRouteImport.update({
+  id: '/aktivasi',
+  path: '/aktivasi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LaporanRoute = LaporanRouteImport.update({
@@ -110,6 +116,7 @@ const ApiPublicPayCallbackProviderRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aktivasi': typeof AktivasiRoute
   '/laporan': typeof LaporanRoute
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aktivasi': typeof AktivasiRoute
   '/laporan': typeof LaporanRoute
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aktivasi': typeof AktivasiRoute
   '/laporan': typeof LaporanRoute
   '/paket': typeof PaketRoute
   '/pendapatan': typeof PendapatanRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aktivasi'
     | '/laporan'
     | '/paket'
     | '/pendapatan'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aktivasi'
     | '/laporan'
     | '/paket'
     | '/pendapatan'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/aktivasi'
     | '/laporan'
     | '/paket'
     | '/pendapatan'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AktivasiRoute: typeof AktivasiRoute
   LaporanRoute: typeof LaporanRoute
   PaketRoute: typeof PaketRoute
   PendapatanRoute: typeof PendapatanRoute
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aktivasi': {
+      id: '/aktivasi'
+      path: '/aktivasi'
+      fullPath: '/aktivasi'
+      preLoaderRoute: typeof AktivasiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/laporan': {
@@ -358,6 +378,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AktivasiRoute: AktivasiRoute,
   LaporanRoute: LaporanRoute,
   PaketRoute: PaketRoute,
   PendapatanRoute: PendapatanRoute,
