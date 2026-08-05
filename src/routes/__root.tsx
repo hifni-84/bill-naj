@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthGate } from "@/components/AuthGate";
+import { LicenseGate } from "@/components/LicenseGate";
 import { MaintenanceRunner } from "@/components/MaintenanceRunner";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ReadOnlyGuard } from "@/components/ReadOnlyGuard";
@@ -152,6 +153,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGate>
+      <LicenseGate>
       <MaintenanceRunner />
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
@@ -171,6 +173,7 @@ function RootComponent() {
           </div>
         </div>
       </SidebarProvider>
+      </LicenseGate>
       </AuthGate>
       <Toaster position="top-right" />
     </QueryClientProvider>
