@@ -16,6 +16,7 @@ import { Route as PaketRouteImport } from './routes/paket'
 import { Route as PendapatanRouteImport } from './routes/pendapatan'
 import { Route as PengaturanRouteImport } from './routes/pengaturan'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as PppoeAktifRouteImport } from './routes/pppoe-aktif'
 import { Route as RadiusRouteImport } from './routes/radius'
 import { Route as SesiAktifRouteImport } from './routes/sesi-aktif'
 import { Route as TagihanRouteImport } from './routes/tagihan'
@@ -60,6 +61,11 @@ const PengaturanRoute = PengaturanRouteImport.update({
 const PortalRoute = PortalRouteImport.update({
   id: '/portal',
   path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PppoeAktifRoute = PppoeAktifRouteImport.update({
+  id: '/pppoe-aktif',
+  path: '/pppoe-aktif',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RadiusRoute = RadiusRouteImport.update({
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
   '/portal': typeof PortalRoute
+  '/pppoe-aktif': typeof PppoeAktifRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
   '/tagihan': typeof TagihanRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
   '/portal': typeof PortalRoute
+  '/pppoe-aktif': typeof PppoeAktifRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
   '/tagihan': typeof TagihanRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/pendapatan': typeof PendapatanRoute
   '/pengaturan': typeof PengaturanRoute
   '/portal': typeof PortalRoute
+  '/pppoe-aktif': typeof PppoeAktifRoute
   '/radius': typeof RadiusRoute
   '/sesi-aktif': typeof SesiAktifRoute
   '/tagihan': typeof TagihanRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
     | '/pendapatan'
     | '/pengaturan'
     | '/portal'
+    | '/pppoe-aktif'
     | '/radius'
     | '/sesi-aktif'
     | '/tagihan'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/pendapatan'
     | '/pengaturan'
     | '/portal'
+    | '/pppoe-aktif'
     | '/radius'
     | '/sesi-aktif'
     | '/tagihan'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/pendapatan'
     | '/pengaturan'
     | '/portal'
+    | '/pppoe-aktif'
     | '/radius'
     | '/sesi-aktif'
     | '/tagihan'
@@ -240,6 +252,7 @@ export interface RootRouteChildren {
   PendapatanRoute: typeof PendapatanRoute
   PengaturanRoute: typeof PengaturanRoute
   PortalRoute: typeof PortalRoute
+  PppoeAktifRoute: typeof PppoeAktifRoute
   RadiusRoute: typeof RadiusRoute
   SesiAktifRoute: typeof SesiAktifRoute
   TagihanRoute: typeof TagihanRoute
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pppoe-aktif': {
+      id: '/pppoe-aktif'
+      path: '/pppoe-aktif'
+      fullPath: '/pppoe-aktif'
+      preLoaderRoute: typeof PppoeAktifRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/radius': {
@@ -384,6 +404,7 @@ const rootRouteChildren: RootRouteChildren = {
   PendapatanRoute: PendapatanRoute,
   PengaturanRoute: PengaturanRoute,
   PortalRoute: PortalRoute,
+  PppoeAktifRoute: PppoeAktifRoute,
   RadiusRoute: RadiusRoute,
   SesiAktifRoute: SesiAktifRoute,
   TagihanRoute: TagihanRoute,
