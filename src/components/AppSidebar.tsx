@@ -10,13 +10,14 @@ import {
   LogOut,
   Radio,
   Receipt,
-  Router as RouterIcon,
   Settings,
   ShieldCheck,
   Ticket,
   Wifi,
 
 } from "lucide-react";
+
+import nrLogo from "@/assets/nr-logo.png";
 
 import {
   Sidebar,
@@ -59,9 +60,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
         <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <RouterIcon className="size-4" />
-          </span>
+          <img
+            src={nrLogo}
+            alt="NR Logo"
+            className="size-9 shrink-0 rounded-xl object-cover shadow-lg shadow-primary/25"
+          />
           {!collapsed && (
             <div className="leading-tight">
               <p className="text-sm font-semibold tracking-tight">NAJWA_BILLING</p>
