@@ -569,6 +569,11 @@ function VoucherPage() {
                 onClick={() => {
                   const p = (plans.data ?? []).find((x) => x.name === mPlan);
                   if (!p) return;
+                  const nama = mUser.trim();
+                  if ((users.data ?? []).some((u) => u.username === nama)) {
+                    toast.error(`Username ${nama} sudah ada di server. Pakai kode lain.`);
+                    return;
+                  }
                   createUsers.mutate(
                     {
                       users: [
