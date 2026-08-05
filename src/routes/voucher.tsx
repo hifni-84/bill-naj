@@ -395,12 +395,39 @@ function VoucherPage() {
                   const len = Math.max(4, Math.min(12, Number(vPanjang) || 6));
                   const batch = vBatch.trim() || new Date().toISOString().slice(0, 10);
                   const chars = KARAKTER.find((k) => k.id === vChar)?.chars ?? KARAKTER[0]!.chars;
-                  const list = Array.from({ length: n }, () => {
-                    const c = `${vPrefix.trim()}${kode(len, chars)}`;
-                    return {
+                  // Kode tidak boleh sama dengan voucher yang sudah tersimpan
+                  // di server (termasuk yang expired) maupun antar voucher baru.
+                  const dipakai = new Set((users.data ?? []).map((u) => u.username));
+                  const list: {
+                    username: string;
+                    password: string;
+                    plan: string;
+                    batch: string;
+                    price: number;
+                    service: "hotspot" | "pppoe";
+                    paid: boolean;
+                    nas: string;
+                    phone: string;
+                  }[] = [];
+                  for (let i = 0; i < n; i += 1) {
+                    let c = "";
+                    let panjang = len;
+                    for (let coba = 0; coba < 200; coba += 1) {
+                      c = `${vPrefix.trim()}${kode(panjang, chars)}`;
+                      if (!dipakai.has(c)) break;
+                      c = "";
+                      if (coba > 0 && coba % 40 === 0 && panjang < 12) panjang += 1;
+                    }
+                    if (!c) {
+                      toast.error(
+                        "Kode unik habis untuk panjang/karakter ini. Tambah panjang kode atau ganti prefix.",
+                      );
+                      return;
+                    }
+                    dipakai.add(c);
+                    list.push({
                       username: c,
-                      password: vMode === "sama" ? c : kode(len, chars),
-
+                      password: vMode === "sama" ? c : kode(panjang, chars),
                       plan: p.name,
                       batch,
                       price: p.price,
@@ -408,8 +435,8 @@ function VoucherPage() {
                       paid: vPaid === "paid",
                       nas: vNas === "semua" ? "" : vNas,
                       phone: bulanan(p.name) ? vPhone.trim() : "",
-                    };
-                  });
+                    });
+                  }
                   createUsers.mutate(
                     { users: list },
                     {
@@ -542,6 +569,11 @@ function VoucherPage() {
                 onClick={() => {
                   const p = (plans.data ?? []).find((x) => x.name === mPlan);
                   if (!p) return;
+                  const nama = mUser.trim();
+                  if ((users.data ?? []).some((u) => u.username === nama)) {
+                    toast.error(`Username ${nama} sudah ada di server. Pakai kode lain.`);
+                    return;
+                  }
                   createUsers.mutate(
                     {
                       users: [
