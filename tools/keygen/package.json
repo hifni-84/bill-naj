@@ -1,0 +1,15 @@
+{
+  "name": "najwa-billing-keygen",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generator kode aktivasi NAJWA_BILLING (Windows)",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-packager . NAJWA-Keygen --platform=win32 --arch=x64 --out=release --overwrite --ignore=release"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "@electron/packager": "^18.3.6"
+  }
+}

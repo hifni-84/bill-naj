@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NAJWA_BILLING — Generator Kode Aktivasi</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; font-family: "Segoe UI", system-ui, sans-serif; }
+  body { margin: 0; background: #0d1117; color: #e6edf3; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
+  .card { width: 100%; max-width: 460px; background: #161b22; border: 1px solid #30363d; border-radius: 14px; padding: 22px; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; font-size: 12px; color: #8b949e; }
+  label { display: block; font-size: 12px; margin: 12px 0 5px; color: #c9d1d9; }
+  input, select { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; font-size: 14px; }
+  input { font-family: ui-monospace, Consolas, monospace; letter-spacing: 1px; }
+  button { width: 100%; margin-top: 16px; padding: 10px; border: 0; border-radius: 8px; background: #2f81f7; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.ghost { background: #21262d; border: 1px solid #30363d; margin-top: 8px; }
+  .out { margin-top: 16px; padding: 14px; border-radius: 10px; background: #0d1117; border: 1px dashed #30363d; text-align: center; }
+  .code { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 3px; font-weight: 700; }
+  .muted { font-size: 11px; color: #8b949e; margin-top: 6px; }
+  .err { color: #f85149; font-size: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Generator Kode Aktivasi</h1>
+    <p class="sub">NAJWA_BILLING · kode terikat Software ID billing + lisensi MikroTik</p>
+
+    <label for="sid">Software ID Billing</label>
+    <input id="sid" placeholder="XXXX-XXXX-XXXX" />
+
+    <label for="mt">Software ID / Lisensi MikroTik</label>
+    <input id="mt" placeholder="XXXX-XXXX" />
+
+    <label for="dur">Masa Aktif</label>
+    <select id="dur">
+      <option value="T">3 Hari</option>
+      <option value="B">1 Bulan</option>
+      <option value="Y">1 Tahun</option>
+      <option value="L">Selamanya (Lifetime)</option>
+    </select>
+
+    <label for="sec">Secret (kosongkan = bawaan)</label>
+    <input id="sec" placeholder="NAJWA-BILLING-2026-LICENSE-V1" style="letter-spacing:0" />
+
+    <button id="gen">Buat Kode</button>
+    <div class="out">
+      <div class="code" id="code">— — — —</div>
+      <div class="muted" id="info">Isi data lalu klik Buat Kode</div>
+    </div>
+    <button class="ghost" id="copy">Salin Kode</button>
+    <div class="err" id="err"></div>
+  </div>
+
+<script>
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const DEFAULT_SECRET = "NAJWA-BILLING-2026-LICENSE-V1";
+const LABEL = { T: "3 Hari", B: "1 Bulan", Y: "1 Tahun", L: "Selamanya" };
+const normalize = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const group = (s) => (s.match(/.{1,4}/g) || []).join("-");
+
+async function hmac(secret, message) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(message)));
+}
+
+function base32(bytes, length) {
+  let out = "";
+  for (let i = 0; i < length; i++) out += ALPHABET[bytes[i % bytes.length] % ALPHABET.length];
+  return out;
+}
+
+async function makeCode(sid, mt, dur, secret) {
+  const mac = await hmac(secret || DEFAULT_SECRET, `${normalize(sid)}|${normalize(mt)}|${dur}`);
+  return group(dur + base32(mac, 11));
+}
+
+document.getElementById("gen").onclick = async () => {
+  const sid = document.getElementById("sid").value;
+  const mt = document.getElementById("mt").value;
+  const dur = document.getElementById("dur").value;
+  const sec = document.getElementById("sec").value.trim();
+  const err = document.getElementById("err");
+  err.textContent = "";
+  if (!normalize(sid) || !normalize(mt)) { err.textContent = "Software ID billing dan lisensi MikroTik wajib diisi."; return; }
+  const code = await makeCode(sid, mt, dur, sec);
+  document.getElementById("code").textContent = code;
+  document.getElementById("info").textContent = `Masa aktif: ${LABEL[dur]} — dihitung sejak kode diaktifkan di billing`;
+};
+
+document.getElementById("copy").onclick = async () => {
+  const code = document.getElementById("code").textContent.trim();
+  if (!code || code.startsWith("—")) return;
+  try { await navigator.clipboard.writeText(code); document.getElementById("info").textContent = "Kode disalin ke clipboard"; } catch {}
+};
+</script>
+</body>
+</html>
