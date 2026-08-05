@@ -304,6 +304,7 @@ export async function listSessions(): Promise<RadiusSession[]> {
 export type RadiusReport = {
   daily: { date: string; total: number; count: number }[];
   monthly: { month: string; total: number; count: number }[];
+  perPlan: { plan: string; total: number; count: number }[];
   todayRevenue: number;
   todayCount: number;
   monthRevenue: number;
@@ -311,6 +312,7 @@ export type RadiusReport = {
   totalRevenue: number;
   totalUsers: number;
   used: number;
+  unsold: number;
   online: number;
 };
 
@@ -324,10 +326,11 @@ export async function report(): Promise<RadiusReport> {
   const rows = await query<{
     paid: number;
     cost_price: number;
+    plan: string | null;
     created_at: string;
     first_login: string | null;
   }>(
-    `SELECT v.paid, COALESCE(p.cost_price, 0) AS cost_price,
+    `SELECT v.paid, COALESCE(p.cost_price, 0) AS cost_price, v.plan AS plan,
             ${utc("v.created_at")} AS created_at,
             ${utc("COALESCE(v.first_login, (SELECT MIN(a.acctstarttime) FROM radacct a WHERE a.username = v.username))")} AS first_login
        FROM billing_voucher v
@@ -343,6 +346,7 @@ export async function report(): Promise<RadiusReport> {
   const monthKey = nowKey.slice(0, 7);
   const dailyMap = new Map<string, { total: number; count: number }>();
   const monthlyMap = new Map<string, { total: number; count: number }>();
+  const planMap = new Map<string, { total: number; count: number }>();
   let totalRevenue = 0;
   let used = 0;
 
@@ -358,6 +362,9 @@ export async function report(): Promise<RadiusReport> {
     const amount = Number(row.cost_price) || 0;
     const day = dailyMap.get(date) ?? { total: 0, count: 0 };
     dailyMap.set(date, { total: day.total + amount, count: day.count + 1 });
+    const planKey = row.plan || "default";
+    const planValue = planMap.get(planKey) ?? { total: 0, count: 0 };
+    planMap.set(planKey, { total: planValue.total + amount, count: planValue.count + 1 });
     const month = date.slice(0, 7);
     const monthlyValue = monthlyMap.get(month) ?? { total: 0, count: 0 };
     monthlyMap.set(month, {
@@ -386,6 +393,9 @@ export async function report(): Promise<RadiusReport> {
   return {
     daily: [...dailyRows].reverse(),
     monthly: [...monthlyRows].reverse(),
+    perPlan: [...planMap.entries()]
+      .map(([plan, value]) => ({ plan, ...value }))
+      .sort((a, b) => b.total - a.total),
     todayRevenue: hariRow?.total ?? 0,
     todayCount: hariRow?.count ?? 0,
     monthRevenue: bulanRow?.total ?? 0,
@@ -393,6 +403,7 @@ export async function report(): Promise<RadiusReport> {
     totalRevenue,
     totalUsers: rows.length,
     used,
+    unsold: Math.max(0, rows.length - used),
     online: Number(on[0]?.n ?? 0),
   };
 }
