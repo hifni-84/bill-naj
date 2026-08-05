@@ -160,7 +160,7 @@ function PortalPage() {
           />
         </div>
         <Button type="submit" disabled={cek.isPending || !username.trim()}>
-          <Search className="size-4" /> {cek.isPending ? "Mencari..." : "Cek Tagihan"}
+          <Search className="size-4" /> {cek.isPending ? "Mencari..." : "Submit"}
         </Button>
       </form>
 
