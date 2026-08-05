@@ -55,11 +55,16 @@ function PortalPage() {
   const [username, setUsername] = useState("");
   const [beliPhone, setBeliPhone] = useState("");
   const [kode, setKode] = useState("");
+  const [jumlah, setJumlah] = useState<Record<string, number>>({});
+  const qtyOf = (name: string) => jumlah[name] ?? 1;
+  const setQty = (name: string, v: number) =>
+    setJumlah((s) => ({ ...s, [name]: Math.min(50, Math.max(1, Math.round(v) || 1)) }));
 
   const paket = useQuery({ queryKey: ["portal-plans"], queryFn: () => portalPlansGet() });
 
   const pesan = useMutation({
-    mutationFn: (plan: string) => orderCreate({ data: { plan, phone: beliPhone.trim() } }),
+    mutationFn: (plan: string) =>
+      orderCreate({ data: { plan, phone: beliPhone.trim(), qty: qtyOf(plan) } }),
     onSuccess: (res) => {
       if (res.ok && res.url) {
         try {
