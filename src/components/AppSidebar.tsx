@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   BarChart3,
+  KeyRound,
   Package,
   Wallet,
   Database,
@@ -44,6 +45,7 @@ const items = [
   { title: "TR-069", desc: "GenieACS · ONU", url: "/tr069", icon: Radio },
   { title: "VPN Router", desc: "WireGuard multi-router", url: "/vpn", icon: ShieldCheck },
   { title: "Laporan", desc: "Pendapatan", url: "/laporan", icon: BarChart3 },
+  { title: "Aktivasi", desc: "Lisensi & masa aktif", url: "/aktivasi", icon: KeyRound },
   { title: "Pengaturan", desc: "Akun, NAS & sistem", url: "/pengaturan", icon: Settings },
 ];
 
