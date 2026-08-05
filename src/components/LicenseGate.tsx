@@ -100,7 +100,6 @@ export function ActivationPanel({ compact = false }: { compact?: boolean }) {
           <span className="font-semibold">Silahkan hubungi No 085121063293 untuk mendapatkan licensi aktivasi.</span>
         </div>
 
-
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label>Software ID Billing</Label>
