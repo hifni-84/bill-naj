@@ -15,6 +15,8 @@ export type Order = {
   status: "pending" | "paid" | "cancelled";
   username: string;
   password: string;
+  qty: number;
+  vouchers: { username: string; password: string }[];
   pay_url: string;
   created_at: string;
   paid_at: string | null;

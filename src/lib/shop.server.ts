@@ -21,6 +21,8 @@ export type Order = {
   status: "pending" | "paid" | "cancelled";
   username: string;
   password: string;
+  qty: number;
+  vouchers: { username: string; password: string }[];
   pay_url: string;
   created_at: string;
   paid_at: string | null;
@@ -50,10 +52,21 @@ async function ensureTable() {
        KEY idx_status (status)
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   );
+  // Kolom jumlah voucher per pesanan (instalasi lama).
+  try {
+    await query("ALTER TABLE billing_order ADD COLUMN qty INT NOT NULL DEFAULT 1");
+  } catch {
+    /* kolom sudah ada */
+  }
+  try {
+    await query("ALTER TABLE billing_order ADD COLUMN vouchers TEXT NULL");
+  } catch {
+    /* kolom sudah ada */
+  }
   ready = true;
 }
 
-const SELECT = `SELECT id, code, plan, amount, status, username, password, pay_url,
+const SELECT = `SELECT id, code, plan, amount, status, username, password, qty, vouchers, pay_url,
         ${utc("created_at")} AS created_at, ${utc("paid_at")} AS paid_at
    FROM billing_order`;
 
@@ -82,23 +95,24 @@ async function freeUsername() {
 }
 
 /** Buat pesanan voucher + link pembayaran. */
-export async function createOrder(planName: string, phone = "") {
+export async function createOrder(planName: string, phone = "", qty = 1) {
   await ensureTable();
   await ensurePortalColumn();
+  const jumlah = Math.min(50, Math.max(1, Math.round(Number(qty) || 1)));
   const rows = await query<{ name: string; price: number; portal: number }>(
     "SELECT name, price, portal FROM billing_plan WHERE name = ? LIMIT 1",
     [planName.trim()],
   );
   const plan = rows[0];
   if (!plan || !Number(plan.portal)) throw new Error("Paket tidak tersedia untuk dibeli");
-  const amount = Math.max(1, Math.round(Number(plan.price) || 0));
+  const amount = Math.max(1, Math.round(Number(plan.price) || 0)) * jumlah;
 
   const code = `V${rnd(8, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789")}`;
   const { normalizeWaNumber } = await import("./invoice-types");
   const res = await query<{ insertId?: number }>(
-    `INSERT INTO billing_order (code, plan, phone, amount, status, created_at)
-     VALUES (?,?,?,?, 'pending', NOW())`,
-    [code, plan.name, normalizeWaNumber(phone), amount],
+    `INSERT INTO billing_order (code, plan, phone, amount, qty, status, created_at)
+     VALUES (?,?,?,?,?, 'pending', NOW())`,
+    [code, plan.name, normalizeWaNumber(phone), amount, jumlah],
   );
   const idRow = await query<{ id: number }>("SELECT id FROM billing_order WHERE code = ? LIMIT 1", [
     code,
@@ -115,57 +129,83 @@ export async function createOrder(planName: string, phone = "") {
     pay.url,
     id,
   ]);
-  return { code, url: pay.url, amount, plan: plan.name };
+  return { code, url: pay.url, amount, plan: plan.name, qty: jumlah };
 }
 
 /** Dipanggil webhook gateway saat pembayaran lunas: buat voucher-nya. */
 export async function settleOrder(id: number, label = "gateway") {
   await ensureTable();
-  const rows = await query<{ plan: string; phone: string; status: string; username: string }>(
-    "SELECT plan, phone, status, username FROM billing_order WHERE id = ? LIMIT 1",
+  const rows = await query<{
+    plan: string;
+    phone: string;
+    status: string;
+    username: string;
+    qty: number;
+  }>(
+    "SELECT plan, phone, status, username, qty FROM billing_order WHERE id = ? LIMIT 1",
     [id],
   );
   const o = rows[0];
   if (!o) return { ok: false as const, reason: "order-not-found" };
   if (o.status === "paid") return { ok: true as const, username: o.username };
 
-  const username = await freeUsername();
-  const password = rnd(5);
-  await createUsers([
-    {
-      username,
-      password,
+  const jumlah = Math.min(50, Math.max(1, Number(o.qty) || 1));
+  const dibuat: { username: string; password: string }[] = [];
+  for (let i = 0; i < jumlah; i += 1) {
+    dibuat.push({ username: await freeUsername(), password: rnd(5) });
+  }
+  await createUsers(
+    dibuat.map((v) => ({
+      username: v.username,
+      password: v.password,
       plan: o.plan,
       batch: `PORTAL-${label}`,
       price: 0,
-      service: "hotspot",
+      service: "hotspot" as const,
       paid: true,
       phone: o.phone,
-    },
-  ]);
+    })),
+  );
+  const username = dibuat[0]?.username ?? "";
+  const password = dibuat[0]?.password ?? "";
   await query(
-    "UPDATE billing_order SET status = 'paid', paid_at = NOW(), username = ?, password = ? WHERE id = ?",
-    [username, password, id],
+    "UPDATE billing_order SET status = 'paid', paid_at = NOW(), username = ?, password = ?, vouchers = ? WHERE id = ?",
+    [username, password, JSON.stringify(dibuat), id],
   );
 
   // Kirim kode voucher ke WhatsApp pembeli bila gateway WA aktif.
   if (o.phone) {
     try {
       const { sendWa } = await import("./wa.server");
+      const daftar = dibuat.map((v, i) => `${i + 1}. ${v.username} / ${v.password}`).join("\n");
       await sendWa(
         o.phone,
-        `Pembayaran diterima. Voucher internet Anda:\nUsername: ${username}\nPassword: ${password}\nPaket: ${o.plan}`,
+        `Pembayaran diterima. Voucher internet Anda (${jumlah}x ${o.plan}):\n${daftar}`,
       );
     } catch {
       /* gateway WA belum siap */
     }
   }
-  return { ok: true as const, username, password };
+  return { ok: true as const, username, password, vouchers: dibuat };
 }
 
 /** Cek status pesanan (dipakai portal setelah kembali dari pembayaran). */
 export async function orderStatus(code: string) {
   await ensureTable();
-  const rows = await query<Order>(`${SELECT} WHERE code = ? LIMIT 1`, [code.trim()]);
-  return rows[0] ?? null;
+  const rows = await query<Omit<Order, "vouchers"> & { vouchers: unknown }>(
+    `${SELECT} WHERE code = ? LIMIT 1`,
+    [code.trim()],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  let list: { username: string; password: string }[] = [];
+  try {
+    const raw = row.vouchers;
+    if (typeof raw === "string" && raw.trim()) list = JSON.parse(raw);
+    else if (Array.isArray(raw)) list = raw as { username: string; password: string }[];
+  } catch {
+    list = [];
+  }
+  if (!list.length && row.username) list = [{ username: row.username, password: row.password }];
+  return { ...row, qty: Number(row.qty) || 1, vouchers: list } satisfies Order;
 }

@@ -55,11 +55,16 @@ function PortalPage() {
   const [username, setUsername] = useState("");
   const [beliPhone, setBeliPhone] = useState("");
   const [kode, setKode] = useState("");
+  const [jumlah, setJumlah] = useState<Record<string, number>>({});
+  const qtyOf = (name: string) => jumlah[name] ?? 1;
+  const setQty = (name: string, v: number) =>
+    setJumlah((s) => ({ ...s, [name]: Math.min(50, Math.max(1, Math.round(v) || 1)) }));
 
   const paket = useQuery({ queryKey: ["portal-plans"], queryFn: () => portalPlansGet() });
 
   const pesan = useMutation({
-    mutationFn: (plan: string) => orderCreate({ data: { plan, phone: beliPhone.trim() } }),
+    mutationFn: (plan: string) =>
+      orderCreate({ data: { plan, phone: beliPhone.trim(), qty: qtyOf(plan) } }),
     onSuccess: (res) => {
       if (res.ok && res.url) {
         try {
@@ -193,10 +198,20 @@ function PortalPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="mono-num text-sm font-semibold text-primary">
-                    {formatIDR(p.price)}
+                    {formatIDR(p.price * qtyOf(p.name))}
                   </span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    aria-label={`Jumlah voucher ${p.name}`}
+                    className="mono-num h-9 w-16 text-center"
+                    value={qtyOf(p.name)}
+                    onChange={(e) => setQty(p.name, Number(e.target.value))}
+                  />
                   <Button size="sm" disabled={pesan.isPending} onClick={() => pesan.mutate(p.name)}>
-                    <CreditCard className="size-4" /> {pesan.isPending ? "Memproses..." : "Beli"}
+                    <CreditCard className="size-4" />{" "}
+                    {pesan.isPending ? "Memproses..." : `Beli ${qtyOf(p.name)}x`}
                   </Button>
                 </div>
               </li>
@@ -231,17 +246,19 @@ function PortalPage() {
           {order && (
             <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-4">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                Pesanan {order.code} — {order.plan}
+                Pesanan {order.code} — {order.plan} ({order.qty}x)
               </p>
               {order.status === "paid" ? (
-                <div className="mono-num mt-2 text-sm">
-                  <p>
-                    Username: <span className="font-semibold text-primary">{order.username}</span>
-                  </p>
-                  <p>
-                    Password: <span className="font-semibold text-primary">{order.password}</span>
-                  </p>
-                </div>
+                <ul className="mono-num mt-2 grid gap-1 text-sm">
+                  {order.vouchers.map((v, i) => (
+                    <li key={v.username} className="flex flex-wrap items-center gap-2">
+                      <span className="text-muted-foreground">{i + 1}.</span>
+                      <span className="font-semibold text-primary">{v.username}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="font-semibold text-primary">{v.password}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <div className="mt-2">
                   <p className="text-sm text-muted-foreground">
