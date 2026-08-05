@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import nrLogo from "@/assets/nr-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthGate } from "@/components/AuthGate";
 import { LicenseGate } from "@/components/LicenseGate";
@@ -112,7 +113,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
@@ -162,9 +163,11 @@ function RootComponent() {
             <ReadOnlyGuard />
             <header className="no-print sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
               <SidebarTrigger />
-              <span className="text-sm font-medium text-muted-foreground">
-                NAJWA_BILLING · Hotspot & PPPoE
+              <img src={nrLogo} alt="NR" className="size-6 rounded-md object-cover" />
+              <span className="text-sm font-semibold tracking-tight text-foreground">
+                NAJWA_BILLING
               </span>
+              <span className="text-xs text-muted-foreground">· Hotspot & PPPoE</span>
             </header>
             <main className="flex-1 p-4 md:p-6">
               {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
