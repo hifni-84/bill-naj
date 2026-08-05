@@ -226,7 +226,8 @@ export function ActivationPanel({ compact = false }: { compact?: boolean }) {
 export function LicenseGate({ children }: { children: ReactNode }) {
   const { data, isLoading } = useLicense();
   if (isLoading) return null;
-  if (data?.active) return <>{children}</>;
+  // Bila database billing belum tersambung, jangan kunci panel (aktivasi tak bisa diverifikasi).
+  if (data?.active || data?.error) return <>{children}</>;
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-background px-4 py-10">
