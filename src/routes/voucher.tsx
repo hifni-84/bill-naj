@@ -229,7 +229,7 @@ function VoucherPage() {
     else setPrintOpen(false);
   };
 
-  const tampil = useMemo(() => daftar.slice(0, 300), [daftar]);
+  const tampil = useMemo(() => daftar.slice(0, 1000), [daftar]);
   const terpilih = useMemo(() => tampil.filter((u) => pilih[u.username]), [tampil, pilih]);
   const semuaTerpilih = tampil.length > 0 && terpilih.length === tampil.length;
 
