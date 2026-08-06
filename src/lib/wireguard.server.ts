@@ -94,6 +94,46 @@ async function ensureTable() {
   tableReady = true;
 }
 
+/* --------------------- endpoint manual (IP publik/DDNS) -------------------- */
+
+let optTableReady = false;
+async function ensureOptTable() {
+  if (optTableReady) return;
+  await query(
+    `CREATE TABLE IF NOT EXISTS wg_option (
+       name VARCHAR(64) NOT NULL PRIMARY KEY,
+       value VARCHAR(190) NOT NULL
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  );
+  optTableReady = true;
+}
+
+export async function wgGetEndpointOverride(): Promise<string> {
+  try {
+    await ensureOptTable();
+    const rows = await query<{ value: string }>(
+      "SELECT value FROM wg_option WHERE name = 'endpoint' LIMIT 1",
+    );
+    return rows[0]?.value?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export async function wgSetEndpointOverride(endpoint: string) {
+  await ensureOptTable();
+  const clean = endpoint.trim();
+  if (clean) {
+    await query(
+      "INSERT INTO wg_option (name, value) VALUES ('endpoint', ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
+      [clean],
+    );
+  } else {
+    await query("DELETE FROM wg_option WHERE name = 'endpoint'");
+  }
+  return { ok: true as const, endpoint: clean };
+}
+
 /* ------------------------------- info server ------------------------------ */
 
 export async function wgServerInfo(): Promise<WgServerInfo> {
@@ -104,7 +144,7 @@ export async function wgServerInfo(): Promise<WgServerInfo> {
     serverIp: `${WG_NET}.1`,
     serverPublicKey: null,
     listenPort: Number(process.env["WG_PORT"] ?? 51820),
-    endpoint: process.env["PUBLIC_HOST"] ?? "",
+    endpoint: "",
     up: false,
     writable: false,
     error: null,
@@ -136,6 +176,10 @@ export async function wgServerInfo(): Promise<WgServerInfo> {
   } catch {
     info.up = false;
   }
+
+  // Prioritas: endpoint manual dari panel -> env PUBLIC_HOST -> deteksi otomatis
+  const manual = await wgGetEndpointOverride();
+  info.endpoint = manual || (process.env["PUBLIC_HOST"] ?? "");
 
   if (!info.endpoint) {
     try {
