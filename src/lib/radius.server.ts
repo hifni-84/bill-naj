@@ -318,6 +318,69 @@ export async function deleteUsers(usernames: string[]) {
   return { deleted: usernames.length };
 }
 
+/** Ubah voucher/user: username, password, dan paket (profile). */
+export async function updateUser(input: {
+  username: string;
+  newUsername?: string;
+  password?: string;
+  plan?: string;
+}) {
+  const lama = (input.username ?? "").trim();
+  if (!lama) throw new Error("Username lama tidak boleh kosong");
+  const rows = await query<{
+    username: string;
+    password: string;
+    plan: string;
+    nas: string | null;
+  }>("SELECT username, password, plan, nas FROM billing_voucher WHERE username = ? LIMIT 1", [
+    lama,
+  ]);
+  const saatIni = rows[0];
+  if (!saatIni) throw new Error(`Voucher ${lama} tidak ditemukan`);
+
+  const baru = (input.newUsername ?? "").trim() || lama;
+  const password = (input.password ?? "").trim() || saatIni.password;
+  const plan = (input.plan ?? "").trim() || saatIni.plan;
+
+  if (baru !== lama) {
+    const ada = await query<{ username: string }>(
+      `SELECT username FROM billing_voucher WHERE username = ?
+       UNION SELECT username FROM radcheck WHERE username = ?`,
+      [baru, baru],
+    );
+    if (ada.length) throw new Error(`Kode ${baru} sudah dipakai di server`);
+  }
+
+  const paket = await query<{ price: number; service: "hotspot" | "pppoe" }>(
+    "SELECT price, service FROM billing_plan WHERE name = ? LIMIT 1",
+    [plan],
+  );
+  const p = paket[0];
+  if (!p) throw new Error(`Paket ${plan} tidak ditemukan`);
+
+  await query(
+    "UPDATE billing_voucher SET username = ?, password = ?, plan = ?, price = ?, service = ? WHERE username = ?",
+    [baru, password, plan, Number(p.price) || 0, p.service, lama],
+  );
+
+  // Sinkronkan tabel RADIUS
+  await query("UPDATE radcheck SET username = ? WHERE username = ?", [baru, lama]);
+  await query("UPDATE radreply SET username = ? WHERE username = ?", [baru, lama]).catch(
+    () => undefined,
+  );
+  await query(
+    "UPDATE radcheck SET value = ? WHERE username = ? AND attribute = 'Cleartext-Password'",
+    [password, baru],
+  );
+  await query("DELETE FROM radusergroup WHERE username IN (?, ?)", [lama, baru]);
+  await query("INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)", [
+    baru,
+    plan,
+  ]);
+
+  return { ok: true as const, username: baru, password, plan, service: p.service };
+}
+
 /* ------------------------------- SESI ----------------------------------- */
 
 export async function listSessions(): Promise<RadiusSession[]> {
