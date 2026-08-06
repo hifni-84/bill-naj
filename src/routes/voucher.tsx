@@ -265,7 +265,7 @@ function VoucherPage() {
   const cetakSekarang = () => {
     const t = templates.find((x) => x.id === tplId) ?? templates[0] ?? TEMPLATE_DEFAULT;
     const kolom = Math.max(1, Math.min(10, Number(perRow) || 1));
-    const data = antrian.slice(0, 500).map((u, i) => {
+    const data = antrian.slice(0, 2000).map((u, i) => {
       const p = (plans.data ?? []).find((x) => x.name === u.plan);
       return {
         no: i + 1,
