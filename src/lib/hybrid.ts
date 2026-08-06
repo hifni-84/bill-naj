@@ -108,8 +108,8 @@ export function allRouterTargets(primary: MtCreds): Array<{ name: string; creds:
         host: r.host,
         username: r.username,
         password: r.password,
-        port: r.port,
-        useHttps: r.useHttps,
+        ...(r.port !== undefined ? { port: r.port } : {}),
+        ...(r.useHttps !== undefined ? { useHttps: r.useHttps } : {}),
       },
     });
   }
