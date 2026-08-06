@@ -65,17 +65,6 @@ export const wgSetEndpoint = createServerFn({ method: "POST" })
     }
   });
 
-const wgAddUnused = createServerFn({ method: "POST" })
-  .inputValidator((d: { name: string; secret?: string; registerNas?: boolean }) => d)
-  .handler(async ({ data }) => {
-    try {
-      const { wgAddPeer } = await import("./wireguard.server");
-      return await wgAddPeer(data);
-    } catch (e) {
-      return { ok: false as const, error: (e as Error).message };
-    }
-  });
-
 export const wgScript = createServerFn({ method: "POST" })
   .inputValidator((d: { id: number }) => d)
   .handler(async ({ data }) => {
