@@ -134,8 +134,8 @@ export function RouterManager() {
                       host: r.host,
                       username: r.username,
                       password: r.password,
-                      port: r.port,
-                      useHttps: r.useHttps,
+                      port: r.port ?? 80,
+                      useHttps: !!r.useHttps,
                     });
                     toast.success(`${r.name || r.host} dijadikan router aktif`);
                   }}
