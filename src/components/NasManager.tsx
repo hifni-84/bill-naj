@@ -194,7 +194,9 @@ export function NasManager() {
                       title={
                         st?.radiusLast
                           ? `Aktivitas terakhir: ${new Date(st.radiusLast).toLocaleString()} · ${st.radiusSessions} sesi aktif`
-                          : "Belum ada aktivitas RADIUS dari NAS ini"
+                          : st && st.radiusRequests > 0
+                            ? `Router mengirim ${st.radiusRequests} request RADIUS (accept ${st.radiusAccepts}, reject ${st.radiusRejects}, timeout ${st.radiusTimeouts})`
+                            : "Belum ada aktivitas RADIUS dari NAS ini"
                       }
                     />
                   </TableCell>
