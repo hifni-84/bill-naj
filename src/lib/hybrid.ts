@@ -338,6 +338,20 @@ export async function collectRouterLogins(
   return [...map.entries()].map(([username, uptimeSeconds]) => ({ username, uptimeSeconds }));
 }
 
+/** Login dari router utama + semua router tambahan (uptime terbesar dipakai). */
+export async function collectLoginsAllRouters(
+  primary: MtCreds,
+): Promise<Array<{ username: string; uptimeSeconds: number }>> {
+  const map = new Map<string, number>();
+  for (const t of allRouterTargets(primary)) {
+    const items = await collectRouterLogins(t.creds).catch(() => []);
+    for (const it of items) {
+      map.set(it.username, Math.max(map.get(it.username) ?? 0, it.uptimeSeconds));
+    }
+  }
+  return [...map.entries()].map(([username, uptimeSeconds]) => ({ username, uptimeSeconds }));
+}
+
 /**
  * MODE HYBRID: voucher yang login di user lokal MikroTik tidak lewat RADIUS,
  * jadi billing tidak melihatnya. Hook ini memeriksa router tiap 30 detik dan
@@ -347,12 +361,12 @@ export function useHybridLoginSync(creds: MtCreds, enabled: boolean) {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!enabled || !creds.host?.trim()) return;
+    if (!enabled) return;
     let stop = false;
 
     const tick = async () => {
       try {
-        const items = await collectRouterLogins(creds);
+        const items = await collectLoginsAllRouters(creds);
         if (stop || !items.length) return;
         const res = await radiusStampRouterLogins({ data: { items } });
         if (!stop && res.stamped) qc.invalidateQueries({ queryKey: ["radius"] });
