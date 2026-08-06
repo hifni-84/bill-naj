@@ -9,6 +9,11 @@ export type NasStatus = {
   radius: boolean;
   radiusLast: string | null;
   radiusSessions: number;
+  /** jumlah request RADIUS yang dilaporkan router (via /radius monitor) */
+  radiusRequests: number;
+  radiusAccepts: number;
+  radiusRejects: number;
+  radiusTimeouts: number;
   /** REST API router bisa dihubungi dengan kredensial panel */
   api: boolean;
   apiError: string | null;
@@ -30,7 +35,7 @@ export async function nasStatuses(
               SUM(acctstoptime IS NULL) AS sesi,
               DATE_FORMAT(MAX(COALESCE(acctupdatetime, acctstarttime)), '%Y-%m-%dT%H:%i:%sZ') AS terakhir
          FROM radacct
-        WHERE COALESCE(acctupdatetime, acctstarttime) > (UTC_TIMESTAMP() - INTERVAL 1 DAY)
+        WHERE COALESCE(acctupdatetime, acctstarttime) > (UTC_TIMESTAMP() - INTERVAL 7 DAY)
         GROUP BY nasipaddress`,
     );
   } catch {
@@ -48,6 +53,7 @@ export async function nasStatuses(
       let api = false;
       let apiError: string | null = null;
       let identity: string | null = null;
+      let mon = { requests: 0, accepts: 0, rejects: 0, timeouts: 0 };
 
       // Kredensial khusus per NAS (router ke-2 dan seterusnya), jatuh ke kredensial aktif.
       const perHost = (routers ?? []).find(
@@ -73,15 +79,55 @@ export async function nasStatuses(
           identity = typeof name === "string" ? name : null;
         }
         if (!res.ok) apiError = res.error ?? "gagal";
+
+        // Router yang bisa dihubungi: tanya langsung statistik RADIUS-nya.
+        if (res.ok) {
+          const rcreds = {
+            host: n.nasname,
+            username: c.username ?? "admin",
+            password: c.password ?? "",
+            ...(c.port !== undefined ? { port: c.port } : {}),
+            ...(c.useHttps !== undefined ? { useHttps: c.useHttps } : {}),
+          };
+          const stat = await callRouterOs(rcreds, "/radius/monitor", "POST", {
+            numbers: "0",
+            once: "",
+          }).catch(() => ({ ok: false as const, data: null, error: "gagal" }));
+          const raw = stat.ok
+            ? ((Array.isArray(stat.data) ? stat.data[0] : stat.data) as Record<
+                string,
+                unknown
+              > | null)
+            : null;
+          if (raw) {
+            const num = (k: string) => Number(raw[k] ?? 0) || 0;
+            mon = {
+              requests: num("requests"),
+              accepts: num("accepts"),
+              rejects: num("rejects"),
+              timeouts: num("timeouts"),
+            };
+          }
+        }
       } else {
         apiError = "Kredensial router belum diisi di Pengaturan";
       }
 
       return {
         nasname: n.nasname,
-        radius: fresh || Number(r?.sesi ?? 0) > 0,
+        // Terhubung bila ada accounting terbaru/sesi aktif, ATAU router memang
+        // berhasil bertukar paket dengan server (accepts / request tanpa timeout).
+        radius:
+          fresh ||
+          Number(r?.sesi ?? 0) > 0 ||
+          mon.accepts > 0 ||
+          (mon.requests > 0 && mon.requests > mon.timeouts),
         radiusLast: last,
         radiusSessions: Number(r?.sesi ?? 0),
+        radiusRequests: mon.requests,
+        radiusAccepts: mon.accepts,
+        radiusRejects: mon.rejects,
+        radiusTimeouts: mon.timeouts,
         api,
         apiError,
         identity,
