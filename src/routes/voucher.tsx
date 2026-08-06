@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Printer, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { Pencil, Plus, Printer, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
@@ -37,6 +37,7 @@ import {
   radiusDeleteExpired,
   radiusDeleteUsers,
   radiusReactivateUsers,
+  radiusUpdateUser,
 } from "@/lib/radius.functions";
 import {
   useRadiusMutation,
@@ -130,6 +131,56 @@ function VoucherPage() {
     (payload: Parameters<typeof radiusCreateUsers>[0]["data"]) =>
       radiusCreateUsers({ data: payload }),
   );
+  const updateUser = useRadiusMutation(
+    (payload: { username: string; newUsername: string; password: string; plan: string }) =>
+      radiusUpdateUser({ data: payload }),
+  );
+
+  // dialog edit voucher
+  const [editOpen, setEditOpen] = useState(false);
+  const [eLama, setELama] = useState("");
+  const [eUser, setEUser] = useState("");
+  const [ePass, setEPass] = useState("");
+  const [ePlan, setEPlan] = useState("");
+
+  const bukaEdit = (u: { username: string; password: string; plan: string }) => {
+    setELama(u.username);
+    setEUser(u.username);
+    setEPass(u.password);
+    setEPlan(u.plan);
+    setEditOpen(true);
+  };
+
+  const simpanEdit = () => {
+    const username = eUser.trim();
+    const password = ePass.trim();
+    if (!username || !password) {
+      toast.error("Username dan password tidak boleh kosong");
+      return;
+    }
+    updateUser.mutate(
+      { username: eLama, newUsername: username, password, plan: ePlan },
+      {
+        onSuccess: () => {
+          toast.success(`Voucher ${username} diperbarui`);
+          setEditOpen(false);
+          if (username !== eLama) void hapusDiRouter([eLama]);
+          void syncKeRouter([
+            {
+              username,
+              password,
+              plan: ePlan,
+              service:
+                (plans.data ?? []).find((p) => p.name === ePlan)?.service === "pppoe"
+                  ? "pppoe"
+                  : "hotspot",
+            },
+          ]);
+        },
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
+  };
 
   const [vPlan, setVPlan] = useState("");
   const [vJumlah, setVJumlah] = useState("10");
@@ -851,6 +902,15 @@ function VoucherPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Edit ${u.username}`}
+                          title="Edit username, password, profile"
+                          onClick={() => bukaEdit(u)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
                         {expired && (
                           <Button
                             size="icon"
