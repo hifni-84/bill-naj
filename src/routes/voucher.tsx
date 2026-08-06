@@ -55,8 +55,8 @@ import {
   type VoucherTemplate,
 } from "@/lib/voucher-template";
 import {
-  pushVouchersToMikrotik,
-  removeVouchersFromMikrotik,
+  pushVouchersToAllRouters,
+  removeVouchersFromAllRouters,
   useHybrid,
   type HybridVoucher,
 } from "@/lib/hybrid";
@@ -109,14 +109,14 @@ function VoucherPage() {
 
   const syncKeRouter = async (list: HybridVoucher[]) => {
     if (!hybrid.enabled || !hybrid.syncVoucher || !list.length) return;
-    const res = await pushVouchersToMikrotik(creds, list);
+    const res = await pushVouchersToAllRouters(creds, list);
     if (res.ok) toast.success(`${res.created + res.updated} voucher tersimpan juga di MikroTik`);
     else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
   };
 
   const hapusDiRouter = async (usernames: string[]) => {
     if (!hybrid.enabled || !hybrid.syncVoucher || !usernames.length) return;
-    const res = await removeVouchersFromMikrotik(creds, usernames);
+    const res = await removeVouchersFromAllRouters(creds, usernames);
     if (!res.ok) toast.error(`Hapus di MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
   };
 
