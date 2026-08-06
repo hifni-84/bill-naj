@@ -160,13 +160,23 @@ function VoucherPage() {
   const [cari, setCari] = useState("");
   const [filter, setFilter] = useState("semua");
   const [filterPlan, setFilterPlan] = useState("semua");
+  const [dariTgl, setDariTgl] = useState("");
+  const [sampaiTgl, setSampaiTgl] = useState("");
   const [pilih, setPilih] = useState<Record<string, boolean>>({});
 
   const daftar = useMemo(() => {
     const q = cari.trim().toLowerCase();
+    const mulai = dariTgl ? new Date(`${dariTgl}T00:00:00`).getTime() : null;
+    const akhir = sampaiTgl ? new Date(`${sampaiTgl}T23:59:59.999`).getTime() : null;
     return (users.data ?? []).filter((u) => {
       if (q && !u.username.toLowerCase().includes(q)) return false;
       if (filterPlan !== "semua" && u.plan !== filterPlan) return false;
+      if (mulai !== null || akhir !== null) {
+        const dibuat = u.created_at ? new Date(u.created_at).getTime() : NaN;
+        if (Number.isNaN(dibuat)) return false;
+        if (mulai !== null && dibuat < mulai) return false;
+        if (akhir !== null && dibuat > akhir) return false;
+      }
       const expired = isRadiusExpired(u, now);
       if (filter === "online") return u.online > 0;
       if (filter === "belum") return !u.first_login;
@@ -176,7 +186,7 @@ function VoucherPage() {
       if (filter === "unpaid") return u.paid === 0;
       return true;
     });
-  }, [users.data, cari, filter, filterPlan, now]);
+  }, [users.data, cari, filter, filterPlan, dariTgl, sampaiTgl, now]);
 
   const [templates, setTemplates] = useState<VoucherTemplate[]>([TEMPLATE_DEFAULT]);
   const [tplId, setTplId] = useState("default");
@@ -655,6 +665,52 @@ function VoucherPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="flex items-center gap-1">
+                <Input
+                  type="date"
+                  className="w-36"
+                  aria-label="Dibuat dari tanggal"
+                  title="Dibuat dari tanggal"
+                  value={dariTgl}
+                  onChange={(e) => setDariTgl(e.target.value)}
+                />
+                <span className="text-xs text-muted-foreground">s/d</span>
+                <Input
+                  type="date"
+                  className="w-36"
+                  aria-label="Dibuat sampai tanggal"
+                  title="Dibuat sampai tanggal"
+                  value={sampaiTgl}
+                  onChange={(e) => setSampaiTgl(e.target.value)}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Hari ini"
+                  onClick={() => {
+                    const t = new Date();
+                    const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+                    setDariTgl(iso);
+                    setSampaiTgl(iso);
+                  }}
+                >
+                  Hari ini
+                </Button>
+                {(dariTgl || sampaiTgl) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Hapus filter tanggal"
+                    onClick={() => {
+                      setDariTgl("");
+                      setSampaiTgl("");
+                    }}
+                  >
+                    Reset
+                  </Button>
+                )}
+              </div>
 
               <Button variant="outline" onClick={cetak} disabled={!daftar.length}>
                 <Printer className="size-4" />
