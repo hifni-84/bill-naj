@@ -164,13 +164,21 @@ export const radiusDeleteNas = createServerFn({ method: "POST" })
 
 export const radiusNasStatus = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { creds?: { username?: string; password?: string; port?: number; useHttps?: boolean } }) =>
-      d,
+    (d: {
+      creds?: { username?: string; password?: string; port?: number; useHttps?: boolean };
+      routers?: Array<{
+        host?: string;
+        username?: string;
+        password?: string;
+        port?: number;
+        useHttps?: boolean;
+      }>;
+    }) => d,
   )
   .handler(async ({ data }) => {
     try {
       const { nasStatuses } = await import("./nas-status.server");
-      return await nasStatuses(data.creds);
+      return await nasStatuses(data.creds, data.routers);
     } catch {
       return [];
     }
