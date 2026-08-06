@@ -27,7 +27,7 @@ import { radiusDeletePlan, radiusSavePlan } from "@/lib/radius.functions";
 import { useRadiusMutation, useRadiusPlans } from "@/lib/radius-client";
 import type { RadiusPlan } from "@/lib/radius-types";
 import { formatDuration, formatIDR } from "@/lib/mikrotik-types";
-import { pushPlanToMikrotik, useHybrid } from "@/lib/hybrid";
+import { pushPlanToAllRouters, useHybrid } from "@/lib/hybrid";
 import { useCreds } from "@/lib/router-store";
 
 export const Route = createFileRoute("/paket")({
@@ -63,7 +63,7 @@ function PaketPage() {
       toast.error("Alamat router MikroTik belum diatur di Pengaturan");
       return;
     }
-    const res = await pushPlanToMikrotik(creds, plan);
+    const res = await pushPlanToAllRouters(creds, plan);
     if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke MikroTik`);
     else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
   };
