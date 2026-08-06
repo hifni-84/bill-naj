@@ -74,6 +74,15 @@ export const radiusDeleteUsers = createServerFn({ method: "POST" })
     return deleteUsers(data.usernames);
   });
 
+export const radiusUpdateUser = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { username: string; newUsername?: string; password?: string; plan?: string }) => d,
+  )
+  .handler(async ({ data }) => {
+    const { updateUser } = await import("./radius.server");
+    return updateUser(data);
+  });
+
 export const radiusSessions = createServerFn({ method: "GET" }).handler(async () => {
   const { listSessions } = await import("./radius.server");
   try {
