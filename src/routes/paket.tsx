@@ -29,6 +29,7 @@ import type { RadiusPlan } from "@/lib/radius-types";
 import { formatDuration, formatIDR } from "@/lib/mikrotik-types";
 import { pushPlanToAllRouters, useHybrid } from "@/lib/hybrid";
 import { useCreds } from "@/lib/router-store";
+import { useRouters } from "@/lib/routers-store";
 
 export const Route = createFileRoute("/paket")({
   head: () => ({
@@ -55,16 +56,26 @@ function PaketPage() {
   const plans = useRadiusPlans();
   const { hybrid } = useHybrid();
   const { creds } = useCreds();
+  const extraRouters = useRouters();
   const savePlan = useRadiusMutation((p: RadiusPlan) => radiusSavePlan({ data: p }));
   const delPlan = useRadiusMutation((name: string) => radiusDeletePlan({ data: { name } }));
 
-  const syncPlan = async (plan: RadiusPlan) => {
+  const [pTarget, setPTarget] = useState("all");
+
+  const targetLabel = (t: string) =>
+    t === "all"
+      ? "semua MikroTik"
+      : t === creds.host
+        ? `router utama (${t})`
+        : `${extraRouters.find((r) => r.host === t)?.name || t}`;
+
+  const syncPlan = async (plan: RadiusPlan, target = pTarget) => {
     if (!creds.host?.trim()) {
       toast.error("Alamat router MikroTik belum diatur di Pengaturan");
       return;
     }
-    const res = await pushPlanToAllRouters(creds, plan);
-    if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke MikroTik`);
+    const res = await pushPlanToAllRouters(creds, plan, target);
+    if (res.ok) toast.success(`Profile "${plan.name}" tersinkron ke ${targetLabel(target)}`);
     else toast.error(`Sinkron MikroTik gagal: ${res.errors[0] ?? "tidak diketahui"}`);
   };
 
@@ -183,6 +194,34 @@ function PaketPage() {
                 </span>
               </div>
             </div>
+            {pIntegrate && (
+              <div className="grid gap-2 md:col-span-3 xl:col-span-6">
+                <Label>Kirim Profile Ke</Label>
+                <Select value={pTarget} onValueChange={setPTarget}>
+                  <SelectTrigger aria-label="Router tujuan integrasi paket">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua MikroTik</SelectItem>
+                    {creds.host?.trim() ? (
+                      <SelectItem value={creds.host}>
+                        MikroTik 1 — Router utama ({creds.host})
+                      </SelectItem>
+                    ) : null}
+                    {extraRouters
+                      .filter((r) => r.host?.trim())
+                      .map((r, i) => (
+                        <SelectItem key={r.id} value={r.host}>
+                          MikroTik {i + 2} — {r.name || r.host} ({r.host})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">
+                  Pilih router tujuan: semua router sekaligus, atau hanya MikroTik 2 / 3 dst.
+                </span>
+              </div>
+            )}
             <div className="grid gap-2 md:col-span-3 xl:col-span-6">
               <Label htmlFor="p-portal">Tampilkan di Portal Pelanggan</Label>
               <div className="flex items-center gap-3 rounded-md border border-border/60 px-3 py-2">
@@ -283,7 +322,7 @@ function PaketPage() {
                       size="icon"
                       variant="ghost"
                       aria-label={`Integrasikan paket ${p.name} ke MikroTik`}
-                      title="Kirim ke MikroTik sebagai profile"
+                      title={`Kirim ke ${targetLabel(pTarget)} sebagai profile`}
                       onClick={() => void syncPlan(p)}
                     >
                       <UploadCloud className="size-4" />

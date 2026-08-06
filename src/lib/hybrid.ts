@@ -119,12 +119,18 @@ export function allRouterTargets(primary: MtCreds): Array<{ name: string; creds:
 async function forEachRouter(
   primary: MtCreds,
   job: (creds: MtCreds) => Promise<HybridSyncResult>,
+  target: string = "all",
 ): Promise<HybridSyncResult> {
   const out = empty();
-  const targets = allRouterTargets(primary);
+  const all = allRouterTargets(primary);
+  const targets = target === "all" ? all : all.filter((t) => t.creds.host === target);
   if (!targets.length) {
     out.ok = false;
-    out.errors.push("Kredensial router belum diatur di Pengaturan");
+    out.errors.push(
+      target === "all"
+        ? "Kredensial router belum diatur di Pengaturan"
+        : `Router ${target} tidak ditemukan di daftar router`,
+    );
     return out;
   }
   for (const t of targets) {
@@ -143,9 +149,9 @@ async function forEachRouter(
   return out;
 }
 
-/** Upsert paket ke SEMUA router (utama + tambahan). */
-export function pushPlanToAllRouters(primary: MtCreds, plan: RadiusPlan) {
-  return forEachRouter(primary, (c) => pushPlanToMikrotik(c, plan));
+/** Upsert paket ke semua router, atau hanya satu router (pakai host sebagai target). */
+export function pushPlanToAllRouters(primary: MtCreds, plan: RadiusPlan, target: string = "all") {
+  return forEachRouter(primary, (c) => pushPlanToMikrotik(c, plan), target);
 }
 
 /** Upsert voucher ke SEMUA router (utama + tambahan). */
