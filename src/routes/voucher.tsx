@@ -953,6 +953,62 @@ function VoucherPage() {
       </div>
 
       <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+        {null}
+      </Dialog>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Voucher</DialogTitle>
+            <DialogDescription>
+              Ubah username, password, dan profile (paket) untuk {eLama}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="e-user">Username</Label>
+              <Input
+                id="e-user"
+                className="mono-num"
+                value={eUser}
+                onChange={(e) => setEUser(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="e-pass">Password</Label>
+              <Input
+                id="e-pass"
+                className="mono-num"
+                value={ePass}
+                onChange={(e) => setEPass(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Profile (Paket)</Label>
+              <Select value={ePlan} onValueChange={setEPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih paket" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(plans.data ?? []).map((p) => (
+                    <SelectItem key={p.name} value={p.name}>
+                      {p.name} · {formatIDR(p.price)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={simpanEdit} disabled={updateUser.isPending}>
+              {updateUser.isPending ? "Menyimpan…" : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Print Voucher</DialogTitle>
