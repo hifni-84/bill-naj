@@ -16,7 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { wgAdd, wgInfo, wgPeers, wgRemove, wgScript, wgTest } from "@/lib/wireguard.functions";
+import {
+  wgAdd,
+  wgInfo,
+  wgPeers,
+  wgRemove,
+  wgScript,
+  wgSetEndpoint,
+  wgTest,
+} from "@/lib/wireguard.functions";
 import { useCreds } from "@/lib/router-store";
 
 export const Route = createFileRoute("/vpn")({
@@ -60,10 +68,29 @@ function VpnPage() {
 
   const [nama, setNama] = useState("");
   const [secret, setSecret] = useState("rahasia123");
+  const [endpointInput, setEndpointInput] = useState("");
   const [script, setScript] = useState<{ name: string; peerIp: string; text: string } | null>(null);
   const [diag, setDiag] = useState<string[] | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["wg"] });
+
+  const simpanEndpoint = useMutation({
+    mutationFn: () => wgSetEndpoint({ data: { endpoint: endpointInput } }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(("error" in res && res.error) || "Gagal menyimpan endpoint");
+        return;
+      }
+      setScript(null);
+      toast.success(
+        endpointInput.trim()
+          ? `Endpoint disetel ke ${endpointInput.trim()} — ambil ulang Config router`
+          : "Endpoint kembali otomatis",
+      );
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const tambah = useMutation({
     mutationFn: () => wgAdd({ data: { name: nama, secret } }),
@@ -183,6 +210,32 @@ function VpnPage() {
             router berikutnya bisa ditambahkan dari halaman ini.
           </p>
         )}
+
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <Label className="text-xs">Endpoint manual (IP publik / DDNS server)</Label>
+          <p className="mb-2 mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Deteksi otomatis bisa salah kalau server di balik NAT/proxy. Isi IP publik atau DDNS
+            yang benar (contoh <code className="mono-num">38.156.95.73</code> atau{" "}
+            <code className="mono-num">najwa.ddns.net</code>), lalu ambil ulang Config router agar{" "}
+            <code className="mono-num">endpoint-address</code> ikut berubah. Kosongkan untuk kembali
+            otomatis.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              className="max-w-xs"
+              value={endpointInput}
+              onChange={(e) => setEndpointInput(e.target.value)}
+              placeholder={d?.endpoint ?? "38.156.95.73"}
+            />
+            <Button
+              variant="outline"
+              disabled={simpanEndpoint.isPending}
+              onClick={() => simpanEndpoint.mutate()}
+            >
+              Simpan Endpoint
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="panel mb-6 p-5">
