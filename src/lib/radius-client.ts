@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { readRouters } from "./routers-store";
+
 import {
   radiusMaintenance,
   radiusNasList,
@@ -145,6 +147,13 @@ export function useRadiusNasStatus() {
     queryKey: ["radius", "nas-status"],
     queryFn: () => {
       const c = readCreds();
+      const extra = readRouters().map((r) => ({
+        host: r.host,
+        username: r.username,
+        password: r.password,
+        ...(r.port !== undefined ? { port: r.port } : {}),
+        ...(r.useHttps !== undefined ? { useHttps: r.useHttps } : {}),
+      }));
       return radiusNasStatus({
         data: {
           creds: {
@@ -153,6 +162,16 @@ export function useRadiusNasStatus() {
             ...(c.port !== undefined ? { port: c.port } : {}),
             ...(c.useHttps !== undefined ? { useHttps: c.useHttps } : {}),
           },
+          routers: [
+            {
+              host: c.host,
+              username: c.username,
+              password: c.password,
+              ...(c.port !== undefined ? { port: c.port } : {}),
+              ...(c.useHttps !== undefined ? { useHttps: c.useHttps } : {}),
+            },
+            ...extra,
+          ],
         },
       });
     },
