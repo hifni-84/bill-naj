@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { mt, mtList } from "./hotspot";
+import { readRouters } from "./routers-store";
 import type {
   HotspotActive,
   HotspotProfile,
@@ -93,6 +94,69 @@ export function useHybrid() {
 export type HybridSyncResult = { ok: boolean; created: number; updated: number; errors: string[] };
 
 const empty = (): HybridSyncResult => ({ ok: true, created: 0, updated: 0, errors: [] });
+
+/** Router utama + semua router tambahan (router ke-2 dan seterusnya). */
+export function allRouterTargets(primary: MtCreds): Array<{ name: string; creds: MtCreds }> {
+  const list: Array<{ name: string; creds: MtCreds }> = [];
+  if (primary.host?.trim()) list.push({ name: "Router utama", creds: primary });
+  for (const r of readRouters()) {
+    if (!r.host?.trim()) continue;
+    if (list.some((x) => x.creds.host === r.host)) continue;
+    list.push({
+      name: r.name || r.host,
+      creds: {
+        host: r.host,
+        username: r.username,
+        password: r.password,
+        port: r.port,
+        useHttps: r.useHttps,
+      },
+    });
+  }
+  return list;
+}
+
+async function forEachRouter(
+  primary: MtCreds,
+  job: (creds: MtCreds) => Promise<HybridSyncResult>,
+): Promise<HybridSyncResult> {
+  const out = empty();
+  const targets = allRouterTargets(primary);
+  if (!targets.length) {
+    out.ok = false;
+    out.errors.push("Kredensial router belum diatur di Pengaturan");
+    return out;
+  }
+  for (const t of targets) {
+    const res = await job(t.creds).catch(
+      (e): HybridSyncResult => ({ ok: false, created: 0, updated: 0, errors: [(e as Error).message] }),
+    );
+    out.created += res.created;
+    out.updated += res.updated;
+    if (!res.ok) {
+      out.ok = false;
+      for (const err of res.errors) {
+        if (out.errors.length < 5) out.errors.push(`${t.name}: ${err}`);
+      }
+    }
+  }
+  return out;
+}
+
+/** Upsert paket ke SEMUA router (utama + tambahan). */
+export function pushPlanToAllRouters(primary: MtCreds, plan: RadiusPlan) {
+  return forEachRouter(primary, (c) => pushPlanToMikrotik(c, plan));
+}
+
+/** Upsert voucher ke SEMUA router (utama + tambahan). */
+export function pushVouchersToAllRouters(primary: MtCreds, vouchers: HybridVoucher[]) {
+  return forEachRouter(primary, (c) => pushVouchersToMikrotik(c, vouchers));
+}
+
+/** Hapus voucher di SEMUA router (utama + tambahan). */
+export function removeVouchersFromAllRouters(primary: MtCreds, usernames: string[]) {
+  return forEachRouter(primary, (c) => removeVouchersFromMikrotik(c, usernames));
+}
 
 function secondsToRouterOs(seconds: number) {
   if (!seconds || seconds <= 0) return "0s";
