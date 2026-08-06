@@ -15,7 +15,12 @@ export type NasStatus = {
   identity: string | null;
 };
 
-export async function nasStatuses(creds?: Partial<MtCreds>): Promise<NasStatus[]> {
+export type NasCredEntry = Partial<MtCreds> & { host?: string };
+
+export async function nasStatuses(
+  creds?: Partial<MtCreds>,
+  routers?: NasCredEntry[],
+): Promise<NasStatus[]> {
   const nas = await listNas();
 
   let rows: { nasipaddress: string; sesi: number; terakhir: string | null }[] = [];
@@ -44,14 +49,20 @@ export async function nasStatuses(creds?: Partial<MtCreds>): Promise<NasStatus[]
       let apiError: string | null = null;
       let identity: string | null = null;
 
-      if (creds?.username) {
+      // Kredensial khusus per NAS (router ke-2 dan seterusnya), jatuh ke kredensial aktif.
+      const perHost = (routers ?? []).find(
+        (r) => (r.host ?? "").trim().toLowerCase() === n.nasname.trim().toLowerCase(),
+      );
+      const c: Partial<MtCreds> = perHost ?? creds ?? {};
+
+      if (c.username) {
         const res = await callRouterOs(
           {
             host: n.nasname,
-            username: creds.username ?? "admin",
-            password: creds.password ?? "",
-            ...(creds.port !== undefined ? { port: creds.port } : {}),
-            ...(creds.useHttps !== undefined ? { useHttps: creds.useHttps } : {}),
+            username: c.username ?? "admin",
+            password: c.password ?? "",
+            ...(c.port !== undefined ? { port: c.port } : {}),
+            ...(c.useHttps !== undefined ? { useHttps: c.useHttps } : {}),
           },
           "/system/identity",
           "GET",
