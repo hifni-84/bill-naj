@@ -214,6 +214,8 @@ function VoucherPage() {
   const [dariTgl, setDariTgl] = useState("");
   const [sampaiTgl, setSampaiTgl] = useState("");
   const [pilih, setPilih] = useState<Record<string, boolean>>({});
+  const [tandaiDari, setTandaiDari] = useState("1");
+  const [tandaiSampai, setTandaiSampai] = useState("");
 
   const daftar = useMemo(() => {
     const q = cari.trim().toLowerCase();
@@ -289,6 +291,18 @@ function VoucherPage() {
 
   const toggleSemua = (on: boolean) =>
     setPilih(on ? Object.fromEntries(tampil.map((u) => [u.username, true])) : {});
+
+  /** Tandai baris no `a` sampai no `b` (nomor urut pada tabel, mulai dari 1). */
+  const tandaiRentang = () => {
+    const a = Math.max(1, Number(tandaiDari) || 1);
+    const b = Math.min(tampil.length, Number(tandaiSampai) || 0);
+    if (b < a) {
+      toast.error("Nomor akhir harus lebih besar dari nomor awal");
+      return;
+    }
+    setPilih(Object.fromEntries(tampil.slice(a - 1, b).map((u) => [u.username, true])));
+    toast.success(`Voucher no ${a}–${b} ditandai`);
+  };
 
   const cetak = () =>
     bukaCetak(
@@ -759,6 +773,36 @@ function VoucherPage() {
                     }}
                   >
                     Reset
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 rounded-md border px-2 py-1">
+                <span className="text-xs text-muted-foreground">Tandai no</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={tandaiDari}
+                  onChange={(e) => setTandaiDari(e.target.value)}
+                  className="h-8 w-16"
+                  aria-label="Tandai dari nomor"
+                />
+                <span className="text-xs text-muted-foreground">s/d</span>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder={String(tampil.length || 1)}
+                  value={tandaiSampai}
+                  onChange={(e) => setTandaiSampai(e.target.value)}
+                  className="h-8 w-16"
+                  aria-label="Tandai sampai nomor"
+                />
+                <Button size="sm" variant="secondary" onClick={tandaiRentang}>
+                  Tandai
+                </Button>
+                {terpilih.length > 0 && (
+                  <Button size="sm" variant="ghost" onClick={() => setPilih({})}>
+                    Batal
                   </Button>
                 )}
               </div>
