@@ -952,9 +952,6 @@ function VoucherPage() {
         </div>
       </div>
 
-      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        {null}
-      </Dialog>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
