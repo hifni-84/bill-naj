@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { NasManager } from "@/components/NasManager";
+import { RouterManager } from "@/components/RouterManager";
 import { BackupRestore } from "@/components/BackupRestore";
 import { PageHeader } from "@/components/Shared";
 import { Button } from "@/components/ui/button";
@@ -1140,6 +1141,10 @@ function PengaturanPage() {
               </Button>
             </div>
           </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <RouterManager />
         </div>
 
         <div className="lg:col-span-2">
