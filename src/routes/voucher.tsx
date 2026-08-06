@@ -214,6 +214,8 @@ function VoucherPage() {
   const [dariTgl, setDariTgl] = useState("");
   const [sampaiTgl, setSampaiTgl] = useState("");
   const [pilih, setPilih] = useState<Record<string, boolean>>({});
+  const [tandaiDari, setTandaiDari] = useState("1");
+  const [tandaiSampai, setTandaiSampai] = useState("");
 
   const daftar = useMemo(() => {
     const q = cari.trim().toLowerCase();
