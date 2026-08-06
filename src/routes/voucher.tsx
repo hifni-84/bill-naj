@@ -290,6 +290,18 @@ function VoucherPage() {
   const toggleSemua = (on: boolean) =>
     setPilih(on ? Object.fromEntries(tampil.map((u) => [u.username, true])) : {});
 
+  /** Tandai baris no `a` sampai no `b` (nomor urut pada tabel, mulai dari 1). */
+  const tandaiRentang = () => {
+    const a = Math.max(1, Number(tandaiDari) || 1);
+    const b = Math.min(tampil.length, Number(tandaiSampai) || 0);
+    if (b < a) {
+      toast.error("Nomor akhir harus lebih besar dari nomor awal");
+      return;
+    }
+    setPilih(Object.fromEntries(tampil.slice(a - 1, b).map((u) => [u.username, true])));
+    toast.success(`Voucher no ${a}–${b} ditandai`);
+  };
+
   const cetak = () =>
     bukaCetak(
       (terpilih.length ? terpilih : tampil).map((u) => ({
