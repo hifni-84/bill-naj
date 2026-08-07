@@ -34,6 +34,17 @@ async function ensureTable() {
        KEY idx_due (due_date)
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   );
+  // Kolom tambahan untuk invoice manual (diabaikan bila sudah ada).
+  for (const sql of [
+    "ALTER TABLE billing_invoice ADD COLUMN message TEXT NULL",
+    "ALTER TABLE billing_invoice ADD COLUMN manual TINYINT(1) NOT NULL DEFAULT 0",
+  ]) {
+    try {
+      await query(sql);
+    } catch {
+      /* kolom sudah ada */
+    }
+  }
   ready = true;
 }
 
@@ -58,6 +69,7 @@ function radiusDate(iso: string) {
 }
 
 const SELECT = `SELECT id, username, plan, service, amount, status, note,
+        COALESCE(message, '') AS message, manual,
         ${utc("due_date")} AS due_date,
         ${utc("period_end")} AS period_end,
         ${utc("created_at")} AS created_at,
@@ -66,6 +78,7 @@ const SELECT = `SELECT id, username, plan, service, amount, status, note,
 
 /** Sama seperti SELECT, plus nomor WhatsApp pelanggan. */
 const SELECT_WA = `SELECT i.id, i.username, i.plan, i.service, i.amount, i.status, i.note,
+        COALESCE(i.message, '') AS message, i.manual,
         ${utc("i.due_date")} AS due_date,
         ${utc("i.period_end")} AS period_end,
         ${utc("i.created_at")} AS created_at,
