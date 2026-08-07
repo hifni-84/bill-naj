@@ -6,6 +6,7 @@ import {
   Ban,
   ExternalLink,
   MessageCircle,
+  Printer,
   RefreshCw,
   Send,
   Trash2,
@@ -14,6 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/Shared";
+import { ManualInvoiceDialog, printInvoice } from "@/components/ManualInvoiceDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +32,7 @@ import {
   invoiceDelete,
   invoiceGenerate,
   invoiceList,
+  invoiceOptionsGet,
   invoicePay,
 } from "@/lib/invoice.functions";
 import { waPhoneSave, waSendInvoice, waSendUnpaid } from "@/lib/wa.functions";
@@ -73,6 +76,15 @@ function TagihanPage() {
     queryFn: () => invoiceList(),
     refetchInterval: 60_000,
   });
+
+  const opt = useQuery({ queryKey: ["invoice-options"], queryFn: () => invoiceOptionsGet() });
+  const payInfo = {
+    merchant: opt.data?.options.merchant ?? "",
+    logoUrl: opt.data?.options.logoUrl ?? "",
+    payInfo: opt.data?.options.payInfo ?? "",
+    whatsapp: opt.data?.options.whatsapp ?? "",
+    qrisUrl: opt.data?.options.qrisUrl ?? "",
+  };
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["invoices"] });
 
@@ -161,6 +173,7 @@ function TagihanPage() {
         description={`Dibuat otomatis H-1 sebelum paket 30 hari expired. Belum dibayar: ${unpaid.length} tagihan.`}
         action={
           <div className="flex flex-wrap gap-2">
+            <ManualInvoiceDialog onCreated={refresh} />
             <Button variant="outline" asChild>
               <a href="/portal" target="_blank" rel="noreferrer">
                 <ExternalLink className="size-4" /> Portal Pelanggan
