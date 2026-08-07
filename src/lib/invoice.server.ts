@@ -34,6 +34,17 @@ async function ensureTable() {
        KEY idx_due (due_date)
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   );
+  // Kolom tambahan untuk invoice manual (diabaikan bila sudah ada).
+  for (const sql of [
+    "ALTER TABLE billing_invoice ADD COLUMN message TEXT NULL",
+    "ALTER TABLE billing_invoice ADD COLUMN manual TINYINT(1) NOT NULL DEFAULT 0",
+  ]) {
+    try {
+      await query(sql);
+    } catch {
+      /* kolom sudah ada */
+    }
+  }
   ready = true;
 }
 
@@ -58,6 +69,7 @@ function radiusDate(iso: string) {
 }
 
 const SELECT = `SELECT id, username, plan, service, amount, status, note,
+        COALESCE(message, '') AS message, manual,
         ${utc("due_date")} AS due_date,
         ${utc("period_end")} AS period_end,
         ${utc("created_at")} AS created_at,
@@ -66,6 +78,7 @@ const SELECT = `SELECT id, username, plan, service, amount, status, note,
 
 /** Sama seperti SELECT, plus nomor WhatsApp pelanggan. */
 const SELECT_WA = `SELECT i.id, i.username, i.plan, i.service, i.amount, i.status, i.note,
+        COALESCE(i.message, '') AS message, i.manual,
         ${utc("i.due_date")} AS due_date,
         ${utc("i.period_end")} AS period_end,
         ${utc("i.created_at")} AS created_at,
@@ -270,6 +283,74 @@ export async function cancelInvoice(id: number) {
   await query("UPDATE billing_invoice SET status = 'cancelled' WHERE id = ?", [id]);
   return { ok: true as const };
 }
+
+/** Buat satu invoice manual dari panel admin. */
+export async function createManualInvoice(input: {
+  username: string;
+  plan: string;
+  service: "hotspot" | "pppoe";
+  amount: number;
+  dueDate: string;
+  message: string;
+  note?: string;
+  phone?: string;
+}) {
+  await ensureTable();
+  const username = input.username.trim();
+  if (!username) throw new Error("Username wajib diisi");
+  const amount = Math.max(0, Math.round(Number(input.amount) || 0));
+  if (amount <= 0) throw new Error("Nominal harus lebih dari 0");
+  const due = input.dueDate ? new Date(input.dueDate) : new Date();
+  if (Number.isNaN(due.getTime())) throw new Error("Tanggal jatuh tempo tidak valid");
+  const mysqlDate = due.toISOString().slice(0, 19).replace("T", " ");
+
+  try {
+    await query(
+      `INSERT INTO billing_invoice
+       (username, plan, service, amount, due_date, period_end, status, created_at, note, message, manual)
+     VALUES (?,?,?,?,?,?, 'unpaid', NOW(), ?, ?, 1)`,
+      [
+      username,
+      input.plan.trim() || "Manual",
+      input.service,
+      amount,
+      mysqlDate,
+      mysqlDate,
+      (input.note ?? "").slice(0, 255) || "Invoice manual",
+      input.message ?? "",
+      ],
+    );
+  } catch (e) {
+    const m = (e as Error).message;
+    if (/duplicate/i.test(m))
+      throw new Error("Sudah ada tagihan untuk username & jatuh tempo tersebut");
+    throw e;
+  }
+
+  const phone = (input.phone ?? "").trim();
+  if (phone) {
+    try {
+      const { ensurePhoneColumn } = await import("./wa.server");
+      await ensurePhoneColumn();
+      await query("UPDATE billing_voucher SET phone = ? WHERE username = ?", [phone, username]);
+    } catch {
+      /* kolom phone belum siap */
+    }
+  }
+  const row = await query<{ id: number }>(
+    "SELECT id FROM billing_invoice WHERE username = ? ORDER BY id DESC LIMIT 1",
+    [username],
+  );
+  return { ok: true as const, id: Number(row[0]?.id ?? 0) };
+}
+
+export async function updateInvoiceMessage(id: number, message: string) {
+  await ensureTable();
+  await query("UPDATE billing_invoice SET message = ? WHERE id = ?", [message, id]);
+  return { ok: true as const };
+}
+
+
 
 export async function deleteInvoice(id: number) {
   await ensureTable();

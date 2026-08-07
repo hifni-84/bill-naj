@@ -18,6 +18,10 @@ export type Invoice = {
   note: string;
   /** Nomor WhatsApp pelanggan (dari data voucher/user) */
   phone?: string;
+  /** Pesan/keterangan invoice yang bisa diedit admin */
+  message?: string;
+  /** Dibuat manual oleh admin (bukan tagihan otomatis) */
+  manual?: boolean;
 };
 
 export type InvoiceOptions = {
@@ -29,19 +33,28 @@ export type InvoiceOptions = {
   merchant: string;
   /** URL gambar QRIS statis */
   qrisUrl: string;
+  /** URL logo usaha untuk kop invoice */
+  logoUrl: string;
   /** Petunjuk bayar (rekening, e-wallet, dll) */
   payInfo: string;
   /** Nomor WhatsApp admin untuk konfirmasi */
   whatsapp: string;
+  /** Pesan bawaan invoice manual; mendukung {nama} {paket} {nominal} {jatuh_tempo} {merchant} */
+  invoiceMessage: string;
 };
+
+export const defaultInvoiceMessage =
+  "Terima kasih {nama} telah menggunakan layanan {merchant}.\nMohon lakukan pembayaran sebesar {nominal} untuk paket {paket} sebelum {jatuh_tempo}.";
 
 export const defaultInvoiceOptions: InvoiceOptions = {
   enabled: false,
   leadDays: 1,
   merchant: "NAJWA.NET",
   qrisUrl: "",
+  logoUrl: "",
   payInfo: "",
   whatsapp: "",
+  invoiceMessage: defaultInvoiceMessage,
 };
 
 export const invoiceKeys = {
@@ -49,8 +62,10 @@ export const invoiceKeys = {
   leadDays: "billing.invoice.leadDays",
   merchant: "billing.invoice.merchant",
   qrisUrl: "billing.invoice.qrisUrl",
+  logoUrl: "billing.invoice.logoUrl",
   payInfo: "billing.invoice.payInfo",
   whatsapp: "billing.invoice.whatsapp",
+  invoiceMessage: "billing.invoice.message",
 } as const;
 
 export function parseInvoiceOptions(s: Record<string, string>): InvoiceOptions {
@@ -59,8 +74,10 @@ export function parseInvoiceOptions(s: Record<string, string>): InvoiceOptions {
     leadDays: Math.min(30, Math.max(1, Number(s[invoiceKeys.leadDays] ?? 1) || 1)),
     merchant: s[invoiceKeys.merchant] ?? defaultInvoiceOptions.merchant,
     qrisUrl: s[invoiceKeys.qrisUrl] ?? "",
+    logoUrl: s[invoiceKeys.logoUrl] ?? "",
     payInfo: s[invoiceKeys.payInfo] ?? "",
     whatsapp: s[invoiceKeys.whatsapp] ?? "",
+    invoiceMessage: s[invoiceKeys.invoiceMessage] || defaultInvoiceMessage,
   };
 }
 
@@ -70,9 +87,24 @@ export function serializeInvoiceOptions(o: InvoiceOptions): Record<string, strin
     [invoiceKeys.leadDays]: String(o.leadDays),
     [invoiceKeys.merchant]: o.merchant,
     [invoiceKeys.qrisUrl]: o.qrisUrl,
+    [invoiceKeys.logoUrl]: o.logoUrl ?? "",
     [invoiceKeys.payInfo]: o.payInfo,
     [invoiceKeys.whatsapp]: o.whatsapp,
+    [invoiceKeys.invoiceMessage]: o.invoiceMessage ?? defaultInvoiceMessage,
   };
+}
+
+/** Ganti placeholder pesan invoice. */
+export function renderInvoiceMessage(
+  tpl: string,
+  v: { nama: string; paket: string; nominal: number; jatuh_tempo: string; merchant: string },
+) {
+  return (tpl || defaultInvoiceMessage)
+    .replaceAll("{nama}", v.nama)
+    .replaceAll("{paket}", v.paket)
+    .replaceAll("{nominal}", rupiah(v.nominal))
+    .replaceAll("{jatuh_tempo}", v.jatuh_tempo)
+    .replaceAll("{merchant}", v.merchant);
 }
 
 export const rupiah = (n: number) => `Rp ${Number(n || 0).toLocaleString("id-ID")}`;
