@@ -71,6 +71,43 @@ export const invoiceDelete = createServerFn({ method: "POST" })
     return deleteInvoice(data.id);
   });
 
+/** Buat invoice manual dari panel admin. */
+export const invoiceCreateManual = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      username: string;
+      plan: string;
+      service: "hotspot" | "pppoe";
+      amount: number;
+      dueDate: string;
+      message: string;
+      note?: string;
+      phone?: string;
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { createManualInvoice } = await import("./invoice.server");
+      const res = await createManualInvoice(data);
+      return { ...res, error: null as string | null };
+    } catch (e) {
+      return { ok: false as const, id: 0, error: (e as Error).message };
+    }
+  });
+
+/** Simpan perubahan pesan pada satu invoice. */
+export const invoiceMessageSave = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: number; message: string }) => d)
+  .handler(async ({ data }) => {
+    try {
+      const { updateInvoiceMessage } = await import("./invoice.server");
+      await updateInvoiceMessage(data.id, data.message);
+      return { ok: true as const, error: null as string | null };
+    } catch (e) {
+      return { ok: false as const, error: (e as Error).message };
+    }
+  });
+
 /** Portal pelanggan: cek tagihan berdasarkan username voucher/PPPoE. */
 export const invoiceLookup = createServerFn({ method: "POST" })
   .inputValidator((d: { username: string }) => d)
