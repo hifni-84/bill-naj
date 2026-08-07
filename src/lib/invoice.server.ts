@@ -344,11 +344,7 @@ export async function updateInvoiceMessage(id: number, message: string) {
   return { ok: true as const };
 }
 
-export async function cancelInvoiceLegacy(id: number) {
-  await ensureTable();
-  await query("UPDATE billing_invoice SET status = 'cancelled' WHERE id = ?", [id]);
-  return { ok: true as const };
-}
+
 
 export async function deleteInvoice(id: number) {
   await ensureTable();
