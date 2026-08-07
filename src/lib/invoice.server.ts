@@ -304,11 +304,12 @@ export async function createManualInvoice(input: {
   if (Number.isNaN(due.getTime())) throw new Error("Tanggal jatuh tempo tidak valid");
   const mysqlDate = due.toISOString().slice(0, 19).replace("T", " ");
 
-  const res = await query<never>(
-    `INSERT INTO billing_invoice
+  try {
+    await query(
+      `INSERT INTO billing_invoice
        (username, plan, service, amount, due_date, period_end, status, created_at, note, message, manual)
      VALUES (?,?,?,?,?,?, 'unpaid', NOW(), ?, ?, 1)`,
-    [
+      [
       username,
       input.plan.trim() || "Manual",
       input.service,
@@ -317,8 +318,14 @@ export async function createManualInvoice(input: {
       mysqlDate,
       (input.note ?? "").slice(0, 255) || "Invoice manual",
       input.message ?? "",
-    ],
-  );
+      ],
+    );
+  } catch (e) {
+    const m = (e as Error).message;
+    if (/duplicate/i.test(m))
+      throw new Error("Sudah ada tagihan untuk username & jatuh tempo tersebut");
+    throw e;
+  }
 
   const phone = (input.phone ?? "").trim();
   if (phone) {
@@ -334,7 +341,6 @@ export async function createManualInvoice(input: {
     "SELECT id FROM billing_invoice WHERE username = ? ORDER BY id DESC LIMIT 1",
     [username],
   );
-  void res;
   return { ok: true as const, id: Number(row[0]?.id ?? 0) };
 }
 
