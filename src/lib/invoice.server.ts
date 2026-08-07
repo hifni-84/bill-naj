@@ -284,6 +284,72 @@ export async function cancelInvoice(id: number) {
   return { ok: true as const };
 }
 
+/** Buat satu invoice manual dari panel admin. */
+export async function createManualInvoice(input: {
+  username: string;
+  plan: string;
+  service: "hotspot" | "pppoe";
+  amount: number;
+  dueDate: string;
+  message: string;
+  note?: string;
+  phone?: string;
+}) {
+  await ensureTable();
+  const username = input.username.trim();
+  if (!username) throw new Error("Username wajib diisi");
+  const amount = Math.max(0, Math.round(Number(input.amount) || 0));
+  if (amount <= 0) throw new Error("Nominal harus lebih dari 0");
+  const due = input.dueDate ? new Date(input.dueDate) : new Date();
+  if (Number.isNaN(due.getTime())) throw new Error("Tanggal jatuh tempo tidak valid");
+  const mysqlDate = due.toISOString().slice(0, 19).replace("T", " ");
+
+  const res = await query<never>(
+    `INSERT INTO billing_invoice
+       (username, plan, service, amount, due_date, period_end, status, created_at, note, message, manual)
+     VALUES (?,?,?,?,?,?, 'unpaid', NOW(), ?, ?, 1)`,
+    [
+      username,
+      input.plan.trim() || "Manual",
+      input.service,
+      amount,
+      mysqlDate,
+      mysqlDate,
+      (input.note ?? "").slice(0, 255) || "Invoice manual",
+      input.message ?? "",
+    ],
+  );
+
+  const phone = (input.phone ?? "").trim();
+  if (phone) {
+    try {
+      const { ensurePhoneColumn } = await import("./wa.server");
+      await ensurePhoneColumn();
+      await query("UPDATE billing_voucher SET phone = ? WHERE username = ?", [phone, username]);
+    } catch {
+      /* kolom phone belum siap */
+    }
+  }
+  const row = await query<{ id: number }>(
+    "SELECT id FROM billing_invoice WHERE username = ? ORDER BY id DESC LIMIT 1",
+    [username],
+  );
+  void res;
+  return { ok: true as const, id: Number(row[0]?.id ?? 0) };
+}
+
+export async function updateInvoiceMessage(id: number, message: string) {
+  await ensureTable();
+  await query("UPDATE billing_invoice SET message = ? WHERE id = ?", [message, id]);
+  return { ok: true as const };
+}
+
+export async function cancelInvoiceLegacy(id: number) {
+  await ensureTable();
+  await query("UPDATE billing_invoice SET status = 'cancelled' WHERE id = ?", [id]);
+  return { ok: true as const };
+}
+
 export async function deleteInvoice(id: number) {
   await ensureTable();
   await query("DELETE FROM billing_invoice WHERE id = ?", [id]);
