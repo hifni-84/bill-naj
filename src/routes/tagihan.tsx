@@ -269,6 +269,14 @@ function TagihanPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => printInvoice(i, payInfo)}
+                        title="Cetak invoice"
+                      >
+                        <Printer className="size-4" />
+                      </Button>
                       {i.status === "unpaid" && (
                         <>
                           <Button
