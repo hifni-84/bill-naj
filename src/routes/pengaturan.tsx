@@ -1,3 +1,4 @@
+import { DomainManager } from "@/components/DomainManager";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -591,6 +592,9 @@ function PengaturanPage() {
             <Save className="size-4" /> Simpan Alamat Publik
           </Button>
         </div>
+
+        <DomainManager />
+
 
         <div className="panel p-6 lg:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">

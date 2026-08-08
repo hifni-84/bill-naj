@@ -223,7 +223,7 @@ export async function sendInvoiceWa(invoiceId: number, phoneOverride?: string) {
   const phone = normalizeWaNumber(phoneOverride || inv.phone || "");
   if (!phone) throw new Error(`Nomor WhatsApp untuk ${inv.username} belum diisi`);
 
-  const base = await publicBaseUrl();
+  const base = (await publicBaseUrl()).trim().replace(/\/+$/,"").replace(/\/portal$/i,"").replace(/^(?!https?:\/\/)/i,"https://");
   const link = `${base || ""}/portal?u=${encodeURIComponent(inv.username)}`;
   const { merchant } = parseInvoiceMerchant(await getSettings());
   const message = buildInvoiceMessage(o.template, inv, merchant, link);
